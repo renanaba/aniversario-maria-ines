@@ -106,6 +106,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .btn-p{background:var(--rose);color:#fff;border:0}
 .btn-s{background:var(--field);border:0;color:var(--ink)}
 .btn-d{background:none;border:1px solid #D8B4B4;color:#A3302F}
+.sim{margin-top:8px;border-radius:10px;padding:9px 11px;font-size:13px;background:var(--wait-soft);color:#5E4712}
+.sim b{font-weight:600}
+.sim ul{margin:5px 0 0;padding-left:18px}
+.sim li{margin:2px 0}
+.sim .lvl{font-size:11px;font-weight:600;border-radius:5px;padding:0 5px;margin-left:4px;background:#fff}
+.sim.forte{background:#FBE3E1;color:#7A2320}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:20}
 .busy{opacity:.55;pointer-events:none}
 </style>
@@ -159,14 +165,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 <div class="modal hidden" id="modal" role="dialog" aria-modal="true">
   <form class="sheet" id="ef">
     <h2 id="ef-t">Adicionar convidado</h2>
-    <label for="ef-nome">Nome</label><input id="ef-nome" maxlength="80" required>
+    <label for="ef-nome">Nome</label><input id="ef-nome" maxlength="80" required autocomplete="off">
+    <div class="sim hidden" id="ef-sim" aria-live="polite"></div>
     <label for="ef-idade">Idade <small>(vazio = adulto · ex.: 5 anos, 8 meses)</small></label><input id="ef-idade" maxlength="20">
     <label for="ef-lista">Lista</label>
     <select id="ef-lista"><option value="Convidados">Lista de convidados</option><option value="Espera">Lista de espera</option></select>
     <label for="ef-pres">Presença</label>
     <select id="ef-pres"><option>Pendente</option><option>Confirmado</option><option>Não vai</option></select>
     <label for="ef-obs">Observação</label><input id="ef-obs" maxlength="200">
-    <div class="btns"><button type="button" class="btn-d hidden" id="ef-del">Remover</button><button type="button" class="btn-s" id="ef-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
+    <div class="btns"><button type="button" class="btn-d hidden" id="ef-del">Remover</button><button type="button" class="btn-s" id="ef-x">Cancelar</button><button type="submit" class="btn-p" id="ef-ok">Salvar</button></div>
   </form>
 </div>
 
@@ -273,6 +280,48 @@ function renderResp(){
   }).join('') : '<div class="empty">Nenhuma resposta ainda. Envie o convite com o link de confirmação.</div>';
 }
 
+/* ---------- nomes parecidos ---------- */
+function toks(s){ return norm(s).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean); }
+function lev(a,b){ const m=a.length,n=b.length; let p=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const q=[i]; for(let j=1;j<=n;j++) q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1)); p=q; } return p[n]; }
+function tokSim(x,y,fuzzy){
+  if (x===y) return true;
+  if (x.length===1 || y.length===1) return x[0]===y[0];            // "M." x "Maria"
+  const c = x.length<y.length?x:y, l = x.length<y.length?y:x;
+  if (c.length>=3 && l.startsWith(c)) return true;                   // "Rafa" x "Rafaela"
+  if (!fuzzy || c.length<3) return false;
+  return lev(x,y) <= (c.length>=6 ? 2 : 1);                          // "Geovana" x "Giovanna"
+}
+function parecidos(nome, ignorarId){
+  const tn = toks(nome); if (!tn.length || tn.join('').length<2) return [];
+  const full = tn.join(' ');
+  return D.convidados.filter(c => c.id !== ignorarId).map(c => {
+    const tc = toks(c.nome);
+    if (tc.join(' ') === full) return { c, nivel: 'igual' };
+    const [a,b] = tn.length<=tc.length ? [tn,tc] : [tc,tn];
+    const fz = tn.length === tc.length;   // erro de digitação só conta entre nomes do mesmo tamanho
+    const todos = a.every(t => b.some(u => tokSim(t,u,fz)));
+    const forte = a.some(t => t.length>1 && b.some(u => u.length>1 && tokSim(t,u,fz)));
+    return (todos && forte) ? { c, nivel: 'parecido' } : null;
+  }).filter(Boolean).sort((x,y) => (x.nivel==='igual'?0:1)-(y.nivel==='igual'?0:1)).slice(0,8);
+}
+let avisoVisto = '';
+function mostrarParecidos(){
+  const nome = $('#ef-nome').value, box = $('#ef-sim');
+  const r = parecidos(nome, editando ? editando.id : null);
+  avisoVisto = '';
+  $('#ef-ok').textContent = 'Salvar';
+  if (!r.length) { box.classList.add('hidden'); box.innerHTML=''; return r; }
+  const igual = r.some(x => x.nivel==='igual');
+  box.classList.toggle('forte', igual);
+  box.innerHTML = '<b>' + (igual ? '⚠️ Já existe alguém com esse nome:' : 'Nomes parecidos na lista:') + '</b><ul>' +
+    r.map(x => '<li>' + esc(x.c.nome) + (x.c.idade ? ' (' + esc(x.c.idade) + ')' : '') + ' · ' + (x.c.lista==='Espera'?'lista de espera':'lista') +
+      ' · ' + esc(x.c.presenca) + '<span class="lvl">' + (x.nivel==='igual'?'igual':'parecido') + '</span></li>').join('') + '</ul>';
+  box.classList.remove('hidden');
+  return r;
+}
+$('#ef-nome').addEventListener('input', mostrarParecidos);
+
 /* ---------- ações ---------- */
 document.querySelectorAll('[role=tab]').forEach(t => t.addEventListener('click', () => {
   aba = t.dataset.tab; document.querySelectorAll('[role=tab]').forEach(x => x.setAttribute('aria-selected', x===t));
@@ -307,6 +356,7 @@ function abrir(c){
   $('#ef-lista').value = c ? c.lista : (aba==='Espera' ? 'Espera' : 'Convidados');
   $('#ef-pres').value = c ? c.presenca : 'Pendente'; $('#ef-obs').value = c ? c.obs : '';
   $('#ef-del').classList.toggle('hidden', !c);
+  mostrarParecidos();
   $('#modal').classList.remove('hidden'); setTimeout(()=>$('#ef-nome').focus(), 50);
 }
 function fechar(){ $('#modal').classList.add('hidden'); }
@@ -315,6 +365,10 @@ $('#ef-x').addEventListener('click', fechar);
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') fechar(); });
 $('#ef').addEventListener('submit', e => {
   e.preventDefault(); const nome = $('#ef-nome').value.trim(); if (!nome) return;
+  const mudouNome = !editando || norm(editando.nome) !== norm(nome);
+  if (mudouNome && parecidos(nome, editando ? editando.id : null).length && avisoVisto !== norm(nome)) {
+    avisoVisto = norm(nome); $('#ef-ok').textContent = 'Salvar mesmo assim'; $('#ef-sim').scrollIntoView({block:'nearest'}); return;
+  }
   const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim() };
   fechar(); carregar('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
 });
