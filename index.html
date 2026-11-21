@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aniversário de Maria Inês</title>
+<meta name="description" content="Confirme sua presença no aniversário de Maria Inês">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7EDEA; --panel:#FFFDFB; --field:#F6EEEA; --ink:#2E1F26; --ink-soft:#7A6670; --line:#EADCD6;
+  --rose:#B5476E; --rose-deep:#8E2F52; --rose-soft:#F6DDE5; --gold:#B8873B; --ok:#3D6B4C; --ok-soft:#E3EFE6; --no:#8A5A44;
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg)}
+body{font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:16px;line-height:1.5;padding:0 16px 48px}
+.wrap{max-width:560px;margin:0 auto}
+header{text-align:center;padding:40px 8px 24px}
+.kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose);font-weight:600}
+h1{font-family:Newsreader,Georgia,serif;font-weight:600;font-size:clamp(34px,9vw,46px);line-height:1.08;margin:10px 0 14px;color:var(--rose-deep)}
+.info{display:flex;flex-direction:column;gap:4px;color:var(--ink-soft);font-size:15px}
+.info b{color:var(--ink);font-weight:600}
+.info a{color:var(--rose);font-weight:500}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 20px;box-shadow:0 1px 2px rgba(46,31,38,.04)}
+h2{font-family:Newsreader,Georgia,serif;font-weight:600;font-size:24px;margin-bottom:4px}
+.sub{color:var(--ink-soft);font-size:14px;margin-bottom:18px}
+label{display:block;font-weight:500;font-size:14px;margin:16px 0 6px}
+label small{font-weight:400;color:var(--ink-soft)}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--field);border:1px solid transparent;border-radius:12px;padding:12px 14px;outline:none}
+input:focus,textarea:focus{border-color:var(--rose);background:#fff}
+textarea{min-height:76px;resize:vertical}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice button{font:inherit;font-weight:600;padding:14px 10px;border-radius:14px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.choice button[aria-pressed=true].sim{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.choice button[aria-pressed=true].nao{background:#F5E9E2;border-color:var(--no);color:var(--no)}
+.steppers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stepper{background:var(--field);border-radius:14px;padding:10px 12px}
+.stepper .t{font-size:13px;color:var(--ink-soft)}
+.stepper .t b{display:block;color:var(--ink);font-size:14px;font-weight:600}
+.stepper .row{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.stepper button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:20px;line-height:1;color:var(--rose-deep);cursor:pointer}
+.stepper output{font-size:22px;font-weight:600;min-width:2ch;text-align:center}
+.primary{width:100%;margin-top:22px;font:inherit;font-weight:600;font-size:17px;padding:15px;border:0;border-radius:14px;background:var(--rose);color:#fff;cursor:pointer}
+.primary:disabled{opacity:.55;cursor:wait}
+.err{color:#A3302F;font-size:14px;margin-top:12px;min-height:1em}
+.hidden{display:none!important}
+.done{text-align:center;padding:34px 22px}
+.done .big{font-size:44px}
+.done h2{margin:8px 0}
+.done p{color:var(--ink-soft)}
+.linkbtn{margin-top:18px;background:none;border:0;color:var(--rose);font:inherit;font-weight:500;text-decoration:underline;cursor:pointer}
+footer{text-align:center;color:var(--ink-soft);font-size:13px;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Você é nosso convidado</div>
+    <h1 id="titulo">Aniversário de Maria Inês</h1>
+    <div class="info" id="info"></div>
+  </header>
+
+  <section class="card" id="form-card">
+    <h2>Confirme sua presença</h2>
+    <p class="sub" id="prazo-txt">Responda uma vez por família, por favor.</p>
+    <form id="f" novalidate>
+      <label for="nome">Seu nome</label>
+      <input id="nome" autocomplete="name" maxlength="80" placeholder="Como você é chamado pela família">
+
+      <label>Você vai?</label>
+      <div class="choice">
+        <button type="button" class="sim" data-vai="Sim" aria-pressed="false">Sim, vou! 🎉</button>
+        <button type="button" class="nao" data-vai="Não" aria-pressed="false">Não poderei ir</button>
+      </div>
+
+      <div id="bloco-sim" class="hidden">
+        <label>Quantas pessoas vão <small>(contando com você)</small></label>
+        <div class="steppers">
+          <div class="stepper"><div class="t"><b>Adultos</b>13 anos ou mais</div>
+            <div class="row"><button type="button" data-s="adultos" data-d="-1" aria-label="Menos adultos">−</button><output id="adultos">1</output><button type="button" data-s="adultos" data-d="1" aria-label="Mais adultos">+</button></div></div>
+          <div class="stepper"><div class="t"><b>Crianças</b>até 12 anos</div>
+            <div class="row"><button type="button" data-s="criancas" data-d="-1" aria-label="Menos crianças">−</button><output id="criancas">0</output><button type="button" data-s="criancas" data-d="1" aria-label="Mais crianças">+</button></div></div>
+        </div>
+        <label for="acomp">Nome de quem vai com você <small>(separe por vírgula)</small></label>
+        <textarea id="acomp" maxlength="500" placeholder="Ex.: Ana, Pedro, Lucas"></textarea>
+      </div>
+
+      <label for="zap">WhatsApp <small>(opcional)</small></label>
+      <input id="zap" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="(84) 9 0000-0000">
+
+      <label for="recado">Recado para a Maria Inês <small>(opcional)</small></label>
+      <textarea id="recado" maxlength="500"></textarea>
+
+      <button class="primary" id="enviar" type="submit">Enviar resposta</button>
+      <div class="err" id="err" role="alert"></div>
+    </form>
+  </section>
+
+  <section class="card done hidden" id="ok-card">
+    <div class="big" id="ok-emoji">🎈</div>
+    <h2 id="ok-titulo">Presença confirmada!</h2>
+    <p id="ok-msg"></p>
+    <button class="linkbtn" id="nova">Enviar outra resposta</button>
+  </section>
+
+  <section class="card done hidden" id="fechado-card">
+    <div class="big">💌</div>
+    <h2>Confirmações encerradas</h2>
+    <p>O prazo para confirmar já passou. Se precisar, fale direto com a família.</p>
+  </section>
+
+  <footer>Feito com carinho para a Maria Inês</footer>
+</div>
+
+<script>
+/* ======= CONFIGURAÇÃO ======= */
+const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycby6SFxlqkHumnmbWpCMwo3xmLX6Uj0EUKkVZcRwV-oj4POrdXjIjXz6Mq6dK5Fry_oFcg/exec';
+const EVENTO = {
+  data: '',            // ex.: 'Sábado, 13 de dezembro'
+  hora: '',            // ex.: '16h'
+  local: '',           // ex.: 'Rua Tal, 123 — Parnamirim'
+  mapa: '',            // link do Google Maps (opcional)
+  prazo: ''            // último dia para confirmar, 'AAAA-MM-DD' (opcional)
+};
+/* ============================ */
+
+const $ = s => document.querySelector(s);
+const st = { vai: '', adultos: 1, criancas: 0 };
+
+(function montarInfo(){
+  const info = $('#info'); const p = [];
+  if (EVENTO.data || EVENTO.hora) p.push('<span><b>' + [EVENTO.data, EVENTO.hora].filter(Boolean).join(' · ') + '</b></span>');
+  if (EVENTO.local) p.push('<span>' + esc(EVENTO.local) + (EVENTO.mapa ? ' · <a href="' + esc(EVENTO.mapa) + '" target="_blank" rel="noopener">ver no mapa</a>' : '') + '</span>');
+  info.innerHTML = p.join('');
+  if (EVENTO.prazo) {
+    const [a, m, d] = EVENTO.prazo.split('-');
+    $('#prazo-txt').textContent = 'Confirme até ' + d + '/' + m + '. Responda uma vez por família, por favor.';
+    const fim = new Date(EVENTO.prazo + 'T00:00:00-03:00'); fim.setDate(fim.getDate() + 1);
+    if (new Date() >= fim) { $('#form-card').classList.add('hidden'); $('#fechado-card').classList.remove('hidden'); }
+  }
+})();
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+document.querySelectorAll('.choice button').forEach(b => b.addEventListener('click', () => {
+  st.vai = b.dataset.vai;
+  document.querySelectorAll('.choice button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  $('#bloco-sim').classList.toggle('hidden', st.vai !== 'Sim');
+  $('#err').textContent = '';
+}));
+
+document.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.s, min = k === 'adultos' ? 0 : 0;
+  st[k] = Math.max(min, Math.min(20, st[k] + +b.dataset.d));
+  $('#' + k).textContent = st[k];
+}));
+
+$('#f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const nome = $('#nome').value.trim();
+  const err = $('#err');
+  if (nome.length < 2) { err.textContent = 'Escreva seu nome, por favor.'; $('#nome').focus(); return; }
+  if (!st.vai) { err.textContent = 'Toque em "Sim, vou!" ou "Não poderei ir".'; return; }
+  if (st.vai === 'Sim' && st.adultos + st.criancas === 0) { err.textContent = 'Informe quantas pessoas vão.'; return; }
+  err.textContent = '';
+  const btn = $('#enviar'); btn.disabled = true; btn.textContent = 'Enviando…';
+  const payload = { acao: 'rsvp', nome, vai: st.vai, adultos: st.adultos, criancas: st.criancas,
+    acompanhantes: $('#acomp').value.trim(), whatsapp: $('#zap').value.trim(), recado: $('#recado').value.trim() };
+  try {
+    const r = await fetch(ENDPOINT_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.erro || 'falha');
+    mostrarOk(payload);
+  } catch (x) {
+    err.textContent = 'Não consegui enviar agora. Confira sua internet e tente de novo.';
+  } finally { btn.disabled = false; btn.textContent = 'Enviar resposta'; }
+});
+
+function mostrarOk(p){
+  $('#form-card').classList.add('hidden'); $('#ok-card').classList.remove('hidden');
+  const primeiro = p.nome.split(' ')[0];
+  if (p.vai === 'Sim') {
+    $('#ok-emoji').textContent = '🎈'; $('#ok-titulo').textContent = 'Presença confirmada!';
+    const partes = [];
+    if (p.adultos) partes.push(p.adultos + (p.adultos === 1 ? ' adulto' : ' adultos'));
+    if (p.criancas) partes.push(p.criancas + (p.criancas === 1 ? ' criança' : ' crianças'));
+    $('#ok-msg').textContent = 'Obrigado, ' + primeiro + '! Anotamos ' + partes.join(' e ') + '. Esperamos vocês!';
+  } else {
+    $('#ok-emoji').textContent = '💐'; $('#ok-titulo').textContent = 'Resposta recebida';
+    $('#ok-msg').textContent = 'Obrigado por avisar, ' + primeiro + '. Vamos sentir sua falta!';
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+$('#nova').addEventListener('click', () => {
+  $('#f').reset(); st.vai = ''; st.adultos = 1; st.criancas = 0;
+  $('#adultos').textContent = 1; $('#criancas').textContent = 0;
+  document.querySelectorAll('.choice button').forEach(x => x.setAttribute('aria-pressed', false));
+  $('#bloco-sim').classList.add('hidden');
+  $('#ok-card').classList.add('hidden'); $('#form-card').classList.remove('hidden');
+});
+</script>
+</body>
+</html>

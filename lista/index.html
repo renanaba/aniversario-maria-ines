@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Lista de Convidados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7EDEA; --panel:#FFFDFB; --field:#F6EEEA; --ink:#2E1F26; --ink-soft:#7A6670; --line:#EADCD6;
+  --rose:#B5476E; --rose-deep:#8E2F52; --rose-soft:#F6DDE5; --blue:#2F5F8F; --blue-soft:#E1ECF6;
+  --ok:#3D6B4C; --ok-soft:#E3EFE6; --no:#8A5A44; --no-soft:#F5E9E2; --wait:#8A6A1F; --wait-soft:#F6EDD6;
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg)}
+body{font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:15px;line-height:1.45;padding:0 16px 96px}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-family:Newsreader,Georgia,serif;font-weight:600;font-size:28px;color:var(--rose-deep)}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1px solid transparent;border-radius:10px;padding:10px 12px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff}
+.hidden{display:none!important}
+
+/* login */
+#login{max-width:360px;margin:18vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 22px;text-align:center}
+#login p{color:var(--ink-soft);margin:6px 0 18px}
+#login button{margin-top:12px;width:100%;padding:12px;border:0;border-radius:12px;background:var(--rose);color:#fff;font-weight:600}
+.err{color:#A3302F;font-size:14px;margin-top:10px;min-height:1em}
+
+/* topo */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 0 14px}
+.top .acts{display:flex;gap:8px}
+.ghost{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--ink);font-size:14px;white-space:nowrap}
+.sync{font-size:12px;color:var(--ink-soft)}
+
+/* contagens */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:640px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat .l{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.stat .n{font-size:30px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat .d{font-size:13px;color:var(--ink-soft)}
+.stat.main{border-color:var(--rose);background:var(--rose-soft)} .stat.main .n{color:var(--rose-deep)}
+.stat.ok .n{color:var(--ok)} .stat.wait .n{color:var(--wait)}
+.extra{font-size:13px;color:var(--ink-soft);margin:10px 2px 0}
+
+/* abas */
+.tabs{display:flex;gap:6px;margin:22px 0 12px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;padding:10px 12px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--rose-deep);border-color:var(--rose)}
+.tabs .c{font-weight:500;font-size:12px;background:var(--field);border-radius:20px;padding:1px 7px;margin-left:4px}
+
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tools input{flex:1 1 200px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:13px;color:var(--ink-soft)}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* linhas */
+.list{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.who{min-width:0}
+.who .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who .meta{font-size:12px;color:var(--ink-soft);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tag{font-size:11px;font-weight:600;border-radius:6px;padding:1px 6px}
+.tag.c{background:var(--rose-soft);color:var(--rose-deep)} .tag.a{background:var(--blue-soft);color:var(--blue)}
+.pres{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pres button{border:0;background:#fff;padding:7px 9px;font-size:13px;color:var(--ink-soft);border-left:1px solid var(--line)}
+.pres button:first-child{border-left:0}
+.pres button[aria-pressed=true][data-p="Confirmado"]{background:var(--ok-soft);color:var(--ok);font-weight:600}
+.pres button[aria-pressed=true][data-p="Não vai"]{background:var(--no-soft);color:var(--no);font-weight:600}
+.pres button[aria-pressed=true][data-p="Pendente"]{background:var(--field);color:var(--ink);font-weight:600}
+.rowacts{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end;margin-top:-2px}
+.mini{background:none;border:0;color:var(--ink-soft);font-size:12px;padding:2px 4px;text-decoration:underline}
+.empty{padding:26px;text-align:center;color:var(--ink-soft)}
+@media(min-width:640px){.row{grid-template-columns:1fr auto auto}.rowacts{grid-column:auto;margin:0}}
+
+/* respostas */
+.resp{padding:12px 14px;border-top:1px solid var(--line)}
+.resp:first-child{border-top:0}
+.resp .h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.resp .nm{font-weight:600}
+.resp .dt{font-size:12px;color:var(--ink-soft)}
+.resp .b{font-size:14px;margin-top:4px}
+.pill{font-size:12px;font-weight:600;border-radius:20px;padding:2px 9px}
+.pill.sim{background:var(--ok-soft);color:var(--ok)} .pill.nao{background:var(--no-soft);color:var(--no)}
+.resp .q{font-style:italic;color:var(--ink-soft);margin-top:4px}
+.resp .f{display:flex;gap:10px;align-items:center;margin-top:8px;font-size:13px;flex-wrap:wrap}
+.resp .f a{color:var(--rose)}
+.resp.conf{opacity:.6}
+.auto{font-size:12px;color:var(--ok)}
+
+/* botão + e modal */
+.fab{position:fixed;right:max(16px,calc(50% - 380px + 16px));bottom:22px;background:var(--rose);color:#fff;border:0;border-radius:28px;padding:14px 20px;font-weight:600;box-shadow:0 6px 18px rgba(142,47,82,.3)}
+.modal{position:fixed;inset:0;background:rgba(46,31,38,.4);display:flex;align-items:flex-end;justify-content:center;padding:16px;z-index:10}
+@media(min-width:640px){.modal{align-items:center}}
+.sheet{background:var(--panel);border-radius:18px;padding:20px;width:100%;max-width:420px}
+.sheet h2{font-family:Newsreader,Georgia,serif;font-size:22px;margin-bottom:10px}
+.sheet label{display:block;font-size:13px;font-weight:500;margin:12px 0 5px}
+.sheet .btns{display:flex;gap:8px;margin-top:18px}
+.sheet .btns button{flex:1;padding:12px;border-radius:12px;font-weight:600}
+.btn-p{background:var(--rose);color:#fff;border:0}
+.btn-s{background:var(--field);border:0;color:var(--ink)}
+.btn-d{background:none;border:1px solid #D8B4B4;color:#A3302F}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:20}
+.busy{opacity:.55;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<section id="login">
+  <h1>Lista de convidados</h1>
+  <p>Aniversário de Maria Inês</p>
+  <form id="loginf"><input type="password" id="senha" placeholder="Senha" autocomplete="current-password">
+  <button type="submit" id="entrar">Entrar</button></form>
+  <div class="err" id="lerr"></div>
+</section>
+
+<main id="app" class="hidden">
+  <div class="top">
+    <div><h1>Convidados</h1><div class="sync" id="sync"></div></div>
+    <div class="acts">
+      <button class="ghost" id="convite">Copiar convite</button>
+      <button class="ghost" id="atualizar" aria-label="Atualizar">↻</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="extra" id="extra"></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="Convidados" aria-selected="true">Lista<span class="c" id="c-conv"></span></button>
+    <button role="tab" data-tab="Espera" aria-selected="false">Espera<span class="c" id="c-esp"></span></button>
+    <button role="tab" data-tab="Respostas" aria-selected="false">Respostas<span class="c" id="c-resp"></span></button>
+  </div>
+
+  <div id="pane-lista">
+    <div class="tools"><input id="busca" type="search" placeholder="Buscar nome…"></div>
+    <div class="chips" id="chips">
+      <button class="chip" data-f="" aria-pressed="true">Todos</button>
+      <button class="chip" data-f="Pendente" aria-pressed="false">Pendentes</button>
+      <button class="chip" data-f="Confirmado" aria-pressed="false">Confirmados</button>
+      <button class="chip" data-f="Não vai" aria-pressed="false">Não vão</button>
+      <button class="chip" data-f="Criança" aria-pressed="false">Crianças</button>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+  <div id="pane-resp" class="hidden"><div class="list" id="resps"></div></div>
+</main>
+</div>
+
+<button class="fab hidden" id="add">+ Adicionar</button>
+
+<div class="modal hidden" id="modal" role="dialog" aria-modal="true">
+  <form class="sheet" id="ef">
+    <h2 id="ef-t">Adicionar convidado</h2>
+    <label for="ef-nome">Nome</label><input id="ef-nome" maxlength="80" required>
+    <label for="ef-idade">Idade <small>(vazio = adulto · ex.: 5 anos, 8 meses)</small></label><input id="ef-idade" maxlength="20">
+    <label for="ef-lista">Lista</label>
+    <select id="ef-lista"><option value="Convidados">Lista de convidados</option><option value="Espera">Lista de espera</option></select>
+    <label for="ef-pres">Presença</label>
+    <select id="ef-pres"><option>Pendente</option><option>Confirmado</option><option>Não vai</option></select>
+    <label for="ef-obs">Observação</label><input id="ef-obs" maxlength="200">
+    <div class="btns"><button type="button" class="btn-d hidden" id="ef-del">Remover</button><button type="button" class="btn-s" id="ef-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
+  </form>
+</div>
+
+<script>
+/* ======= CONFIGURAÇÃO ======= */
+const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycby6SFxlqkHumnmbWpCMwo3xmLX6Uj0EUKkVZcRwV-oj4POrdXjIjXz6Mq6dK5Fry_oFcg/exec';
+/* ============================ */
+
+const $ = s => document.querySelector(s);
+let senha = '';
+try { senha = sessionStorage.getItem('senhaLista') || ''; } catch (_) {}
+let D = { convidados: [], respostas: [] };
+let aba = 'Convidados', filtro = '', editando = null;
+
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function toast(t){ const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2200); }
+
+async function api(acao, extra){
+  const r = await fetch(ENDPOINT_URL, { method:'POST', body: JSON.stringify(Object.assign({ acao, senha }, extra||{})) });
+  const j = await r.json();
+  if (!j.ok) { const e = new Error(j.erro || 'falha'); e.code = j.erro; throw e; }
+  return j;
+}
+
+async function carregar(acao, extra, msg){
+  $('#app').classList.add('busy');
+  try {
+    const j = await api(acao || 'listar', extra);
+    D = j; $('#sync').textContent = 'Atualizado ' + (j.atualizado || '');
+    render(); if (msg) toast(msg);
+  } catch (e) {
+    if (e.code === 'senha') return sair('Senha incorreta.');
+    toast('Não consegui salvar/atualizar. Tente de novo.');
+  } finally { $('#app').classList.remove('busy'); }
+}
+
+function sair(m){
+  try { sessionStorage.removeItem('senhaLista'); } catch(_){}
+  senha=''; $('#app').classList.add('hidden'); $('#add').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lerr').textContent = m || '';
+}
+
+$('#loginf').addEventListener('submit', async e => {
+  e.preventDefault(); senha = $('#senha').value; $('#lerr').textContent=''; $('#entrar').disabled = true;
+  try {
+    D = await api('listar');
+    try { sessionStorage.setItem('senhaLista', senha); } catch(_){}
+    entrar();
+  } catch (x) { $('#lerr').textContent = x.code === 'senha' ? 'Senha incorreta.' : 'Sem conexão com a planilha. Tente de novo.'; }
+  finally { $('#entrar').disabled = false; }
+});
+
+function entrar(){
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#add').classList.remove('hidden');
+  $('#sync').textContent = 'Atualizado ' + (D.atualizado || ''); render();
+}
+
+/* ---------- contagens ---------- */
+function conta(arr){ return { t: arr.length, a: arr.filter(c=>c.tipo==='Adulto').length, c: arr.filter(c=>c.tipo==='Criança').length }; }
+function ac(x){ return x.a + ' adulto' + (x.a===1?'':'s') + ' · ' + x.c + ' criança' + (x.c===1?'':'s'); }
+
+function render(){
+  const conv = D.convidados.filter(c => c.lista === 'Convidados');
+  const esp = D.convidados.filter(c => c.lista === 'Espera');
+  const tot = conta(conv), conf = conta(conv.filter(c=>c.presenca==='Confirmado')),
+        nao = conta(conv.filter(c=>c.presenca==='Não vai')), pend = conta(conv.filter(c=>c.presenca==='Pendente')), we = conta(esp);
+  $('#stats').innerHTML =
+    stat('main','Convidados',tot) + stat('ok','Confirmados',conf) + stat('','Pendentes',pend) + stat('','Não vão',nao);
+  const sim = D.respostas.filter(r=>r.vai==='Sim');
+  const ra = sim.reduce((s,r)=>s+r.adultos,0), rc = sim.reduce((s,r)=>s+r.criancas,0);
+  $('#extra').innerHTML = 'Lista de espera: <b>' + we.t + '</b> (' + ac(we) + ') &nbsp;·&nbsp; Pelas respostas do link: <b>' + (ra+rc) + '</b> pessoas vão (' + ac({a:ra,c:rc}) + ')';
+  $('#c-conv').textContent = tot.t; $('#c-esp').textContent = we.t; $('#c-resp').textContent = D.respostas.length;
+
+  if (aba === 'Respostas') { renderResp(); return; }
+  const q = norm($('#busca').value.trim());
+  let arr = D.convidados.filter(c => c.lista === aba);
+  if (q) arr = arr.filter(c => norm(c.nome).includes(q));
+  if (filtro === 'Criança') arr = arr.filter(c => c.tipo === 'Criança');
+  else if (filtro) arr = arr.filter(c => c.presenca === filtro);
+  $('#list').innerHTML = arr.length ? arr.map(linha).join('') : '<div class="empty">' + (aba==='Espera' && !q && !filtro ? 'Ninguém na lista de espera ainda. Use “+ Adicionar” e escolha “Lista de espera”.' : 'Nenhum nome encontrado.') + '</div>';
+}
+function stat(cls,l,x){ return '<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="n">'+x.t+'</div><div class="d">'+x.a+' ad. · '+x.c+' cri.</div></div>'; }
+
+function linha(c){
+  const P = ['Confirmado','Pendente','Não vai'], lbl = {'Confirmado':'✓ Vai','Pendente':'?','Não vai':'✗ Não'};
+  return '<div class="row" data-id="'+esc(c.id)+'"><div class="who"><div class="nm">'+esc(c.nome)+'</div><div class="meta">'+
+    '<span class="tag '+(c.tipo==='Criança'?'c':'a')+'">'+c.tipo+'</span>'+(c.idade?'<span>'+esc(c.idade)+'</span>':'')+(c.obs?'<span>· '+esc(c.obs)+'</span>':'')+'</div></div>'+
+    '<div class="pres">'+P.map(p=>'<button data-p="'+p+'" aria-pressed="'+(c.presenca===p)+'" title="'+p+'">'+lbl[p]+'</button>').join('')+'</div>'+
+    '<div class="rowacts"><button class="mini" data-act="mover">'+(c.lista==='Espera'?'Passar p/ lista':'Mover p/ espera')+'</button><button class="mini" data-act="editar">Editar</button></div></div>';
+}
+
+function renderResp(){
+  const R = D.respostas;
+  $('#resps').innerHTML = R.length ? R.map(r => {
+    const zap = String(r.whatsapp||'').replace(/\D/g,'');
+    const qtd = r.vai==='Sim' ? (r.adultos + ' adulto' + (r.adultos===1?'':'s') + (r.criancas? ' · ' + r.criancas + ' criança' + (r.criancas===1?'':'s') : '')) : '';
+    return '<div class="resp'+(r.conferido?' conf':'')+'"><div class="h"><span class="nm">'+esc(r.nome)+'</span><span class="dt">'+esc(r.data)+'</span></div>'+
+      '<div class="b"><span class="pill '+(r.vai==='Sim'?'sim':'nao')+'">'+(r.vai==='Sim'?'Vai':'Não vai')+'</span> '+esc(qtd)+'</div>'+
+      (r.acompanhantes?'<div class="b">Com: '+esc(r.acompanhantes)+'</div>':'')+
+      (r.recado?'<div class="q">“'+esc(r.recado)+'”</div>':'')+
+      '<div class="f">'+(r.marcados?'<span class="auto">Marcado na lista: '+esc(r.marcados)+'</span>':'<span class="dt">Não marcado na lista automaticamente</span>')+
+      (zap.length>=10?'<a href="https://wa.me/55'+zap.replace(/^55(?=\d{10,11}$)/,'')+'" target="_blank" rel="noopener">WhatsApp</a>':'')+
+      '<label style="display:flex;gap:5px;align-items:center;margin-left:auto"><input type="checkbox" data-linha="'+r.linha+'" '+(r.conferido?'checked':'')+' style="width:auto"> conferido</label></div></div>';
+  }).join('') : '<div class="empty">Nenhuma resposta ainda. Envie o convite com o link de confirmação.</div>';
+}
+
+/* ---------- ações ---------- */
+document.querySelectorAll('[role=tab]').forEach(t => t.addEventListener('click', () => {
+  aba = t.dataset.tab; document.querySelectorAll('[role=tab]').forEach(x => x.setAttribute('aria-selected', x===t));
+  $('#pane-lista').classList.toggle('hidden', aba==='Respostas'); $('#pane-resp').classList.toggle('hidden', aba!=='Respostas'); render();
+}));
+$('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if(!b) return; filtro = b.dataset.f;
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x===b)); render(); });
+$('#busca').addEventListener('input', render);
+$('#atualizar').addEventListener('click', () => carregar('listar', null, 'Atualizado'));
+
+$('#list').addEventListener('click', e => {
+  const row = e.target.closest('.row'); if (!row) return;
+  const c = D.convidados.find(x => x.id === row.dataset.id); if (!c) return;
+  const p = e.target.closest('[data-p]'), a = e.target.closest('[data-act]');
+  if (p && p.dataset.p !== c.presenca) {
+    c.presenca = p.dataset.p; render();
+    carregar('salvar', { convidado: c });
+  } else if (a && a.dataset.act === 'mover') {
+    const novo = Object.assign({}, c, { lista: c.lista==='Espera' ? 'Convidados' : 'Espera' });
+    carregar('salvar', { convidado: novo }, novo.lista==='Espera' ? c.nome + ' foi para a lista de espera' : c.nome + ' entrou na lista');
+  } else if (a && a.dataset.act === 'editar') abrir(c);
+});
+
+$('#resps').addEventListener('change', e => {
+  const cb = e.target.closest('[data-linha]'); if (cb) carregar('conferir', { linha: +cb.dataset.linha, valor: cb.checked });
+});
+
+function abrir(c){
+  editando = c || null;
+  $('#ef-t').textContent = c ? 'Editar convidado' : 'Adicionar convidado';
+  $('#ef-nome').value = c ? c.nome : ''; $('#ef-idade').value = c ? c.idade : '';
+  $('#ef-lista').value = c ? c.lista : (aba==='Espera' ? 'Espera' : 'Convidados');
+  $('#ef-pres').value = c ? c.presenca : 'Pendente'; $('#ef-obs').value = c ? c.obs : '';
+  $('#ef-del').classList.toggle('hidden', !c);
+  $('#modal').classList.remove('hidden'); setTimeout(()=>$('#ef-nome').focus(), 50);
+}
+function fechar(){ $('#modal').classList.add('hidden'); }
+$('#add').addEventListener('click', () => abrir(null));
+$('#ef-x').addEventListener('click', fechar);
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') fechar(); });
+$('#ef').addEventListener('submit', e => {
+  e.preventDefault(); const nome = $('#ef-nome').value.trim(); if (!nome) return;
+  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim() };
+  fechar(); carregar('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
+});
+$('#ef-del').addEventListener('click', () => {
+  if (!editando || !confirm('Remover ' + editando.nome + ' da lista?')) return;
+  const n = editando.nome; fechar(); carregar('remover', { id: editando.id }, n + ' removido');
+});
+
+$('#convite').addEventListener('click', async () => {
+  const link = location.origin + '/';
+  const txt = 'Oi! 🎈 Você está convidado para o aniversário da Maria Inês! Confirme sua presença por aqui, por favor: ' + link;
+  try { await navigator.clipboard.writeText(txt); toast('Convite copiado'); } catch(_) { prompt('Copie o convite:', txt); }
+});
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden && senha && !$('#app').classList.contains('hidden')) carregar('listar'); });
+
+if (senha) api('listar').then(j => { D = j; entrar(); }).catch(e => sair(e.code==='senha' ? 'Senha incorreta.' : ''));
+</script>
+</body>
+</html>
