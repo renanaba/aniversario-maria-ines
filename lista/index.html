@@ -48,8 +48,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .extra{font-size:13px;color:var(--ink-soft);margin:10px 2px 0}
 
 /* abas */
-.tabs{display:flex;gap:6px;margin:22px 0 12px;border-bottom:1px solid var(--line)}
-.tabs button{background:none;border:0;padding:10px 12px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs{display:flex;gap:2px;margin:22px 0 12px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{white-space:nowrap;flex:0 0 auto;background:none;border:0;padding:10px 9px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabs button[aria-selected=true]{color:var(--rose-deep);border-color:var(--rose)}
 .tabs .c{font-weight:500;font-size:12px;background:var(--field);border-radius:20px;padding:1px 7px;margin-left:4px}
 
@@ -112,6 +113,24 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .sim li{margin:2px 0}
 .sim .lvl{font-size:11px;font-weight:600;border-radius:5px;padding:0 5px;margin-left:4px;background:#fff}
 .sim.forte{background:#FBE3E1;color:#7A2320}
+.fam{padding:12px 14px;border-top:1px solid var(--line)}
+.fam:first-child{border-top:0}
+.fam .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fam .nm{font-weight:600}
+.fam .cnt{font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.mems{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.mchip{font-size:12px;border-radius:20px;padding:2px 9px;background:var(--field);color:var(--ink)}
+.mchip.Confirmado{background:var(--ok-soft);color:var(--ok)} .mchip.Não.vai{background:var(--no-soft);color:var(--no)}
+.fam .f{display:flex;gap:6px;flex-wrap:wrap}
+.fam .f button,.fam .f a{font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:5px 10px;color:var(--ink);text-decoration:none}
+.fam .f a.wa{background:#E3F4E8;border-color:#BFE3CB;color:#1F6B3A}
+.famhint{font-size:13px;color:var(--ink-soft);margin:0 2px 10px}
+.pick{max-height:42vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+.pick label{display:flex!important;align-items:center;gap:8px;margin:0!important;padding:8px 10px;border-top:1px solid var(--line);font-weight:400!important;font-size:14px!important}
+.pick label:first-child{border-top:0}
+.pick input{width:auto}
+.pick small{color:var(--ink-soft);margin-left:auto;font-size:11px;text-align:right}
+.tag.f{background:var(--field);color:var(--ink-soft)}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:20}
 .busy{opacity:.55;pointer-events:none}
 </style>
@@ -142,6 +161,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="Convidados" aria-selected="true">Lista<span class="c" id="c-conv"></span></button>
     <button role="tab" data-tab="Espera" aria-selected="false">Espera<span class="c" id="c-esp"></span></button>
+    <button role="tab" data-tab="Famílias" aria-selected="false">Famílias<span class="c" id="c-fam"></span></button>
     <button role="tab" data-tab="Respostas" aria-selected="false">Respostas<span class="c" id="c-resp"></span></button>
   </div>
 
@@ -157,6 +177,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <div class="list" id="list"></div>
   </div>
   <div id="pane-resp" class="hidden"><div class="list" id="resps"></div></div>
+  <div id="pane-fam" class="hidden">
+    <div class="tools"><button class="ghost" id="nova-fam">+ Nova família</button></div>
+    <div class="famhint" id="famhint"></div>
+    <div class="list" id="fams"></div>
+  </div>
 </main>
 </div>
 
@@ -172,8 +197,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <select id="ef-lista"><option value="Convidados">Lista de convidados</option><option value="Espera">Lista de espera</option></select>
     <label for="ef-pres">Presença</label>
     <select id="ef-pres"><option>Pendente</option><option>Confirmado</option><option>Não vai</option></select>
+    <label for="ef-fam">Família</label>
+    <select id="ef-fam"></select>
     <label for="ef-obs">Observação</label><input id="ef-obs" maxlength="200">
     <div class="btns"><button type="button" class="btn-d hidden" id="ef-del">Remover</button><button type="button" class="btn-s" id="ef-x">Cancelar</button><button type="submit" class="btn-p" id="ef-ok">Salvar</button></div>
+  </form>
+</div>
+
+<div class="modal hidden" id="fmodal" role="dialog" aria-modal="true">
+  <form class="sheet" id="ff">
+    <h2 id="ff-t">Nova família</h2>
+    <label for="ff-nome">Nome da família <small>(aparece no convite: “Olá, …!”)</small></label>
+    <input id="ff-nome" maxlength="80" placeholder="Ex.: Família do Rodrigo e da Gabi" required>
+    <label for="ff-busca">Quem faz parte</label>
+    <input id="ff-busca" type="search" placeholder="Buscar nome…" autocomplete="off">
+    <div class="pick" id="ff-pick"></div>
+    <div class="btns"><button type="button" class="btn-d hidden" id="ff-del">Excluir</button><button type="button" class="btn-s" id="ff-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
   </form>
 </div>
 
@@ -185,11 +224,11 @@ const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycby6SFxlqkHumnmbWpC
 const $ = s => document.querySelector(s);
 let senha = '';
 try { senha = sessionStorage.getItem('senhaLista') || ''; } catch (_) {}
-let D = { convidados: [], respostas: [] };
+let D = { convidados: [], respostas: [], familias: [] };
 let aba = 'Convidados', filtro = '', editando = null;
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function toast(t){ const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2200); }
 
 async function api(acao, extra){
@@ -203,7 +242,7 @@ async function carregar(acao, extra, msg){
   $('#app').classList.add('busy');
   try {
     const j = await api(acao || 'listar', extra);
-    D = j; $('#sync').textContent = 'Atualizado ' + (j.atualizado || '');
+    D = j; D.familias = D.familias || []; $('#sync').textContent = 'Atualizado ' + (j.atualizado || '');
     render(); if (msg) toast(msg);
   } catch (e) {
     if (e.code === 'senha') return sair('Senha incorreta.');
@@ -226,7 +265,12 @@ $('#loginf').addEventListener('submit', async e => {
   finally { $('#entrar').disabled = false; }
 });
 
+function famNome(cod){ const f = (D.familias||[]).find(x => x.codigo === cod); return f ? f.nome : ''; }
+const BASE = new URL('../', location.href).href;
+function linkFam(f){ return BASE + '?f=' + f.codigo; }
+function conviteFam(f){ return 'Oi! 🎈 ' + f.nome + ', vocês estão convidados para o aniversário da Maria Inês! Confirmem aqui quem vai, por favor: ' + linkFam(f); }
 function entrar(){
+  D.familias = D.familias || [];
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#add').classList.remove('hidden');
   $('#sync').textContent = 'Atualizado ' + (D.atualizado || ''); render();
 }
@@ -245,9 +289,10 @@ function render(){
   const sim = D.respostas.filter(r=>r.vai==='Sim');
   const ra = sim.reduce((s,r)=>s+r.adultos,0), rc = sim.reduce((s,r)=>s+r.criancas,0);
   $('#extra').innerHTML = 'Lista de espera: <b>' + we.t + '</b> (' + ac(we) + ') &nbsp;·&nbsp; Pelas respostas do link: <b>' + (ra+rc) + '</b> pessoas vão (' + ac({a:ra,c:rc}) + ')';
-  $('#c-conv').textContent = tot.t; $('#c-esp').textContent = we.t; $('#c-resp').textContent = D.respostas.length;
+  $('#c-conv').textContent = tot.t; $('#c-esp').textContent = we.t; $('#c-resp').textContent = D.respostas.length; $('#c-fam').textContent = (D.familias||[]).length;
 
   if (aba === 'Respostas') { renderResp(); return; }
+  if (aba === 'Famílias') { renderFam(); return; }
   const q = norm($('#busca').value.trim());
   let arr = D.convidados.filter(c => c.lista === aba);
   if (q) arr = arr.filter(c => norm(c.nome).includes(q));
@@ -260,7 +305,7 @@ function stat(cls,l,x){ return '<div class="stat '+cls+'"><div class="l">'+l+'</
 function linha(c){
   const P = ['Confirmado','Pendente','Não vai'], lbl = {'Confirmado':'✓ Vai','Pendente':'?','Não vai':'✗ Não'};
   return '<div class="row" data-id="'+esc(c.id)+'"><div class="who"><div class="nm">'+esc(c.nome)+'</div><div class="meta">'+
-    '<span class="tag '+(c.tipo==='Criança'?'c':'a')+'">'+c.tipo+'</span>'+(c.idade?'<span>'+esc(c.idade)+'</span>':'')+(c.obs?'<span>· '+esc(c.obs)+'</span>':'')+'</div></div>'+
+    '<span class="tag '+(c.tipo==='Criança'?'c':'a')+'">'+c.tipo+'</span>'+(c.idade?'<span>'+esc(c.idade)+'</span>':'')+(c.familia&&famNome(c.familia)?'<span class="tag f">'+esc(famNome(c.familia))+'</span>':'')+(c.obs?'<span>· '+esc(c.obs)+'</span>':'')+'</div></div>'+
     '<div class="pres">'+P.map(p=>'<button data-p="'+p+'" aria-pressed="'+(c.presenca===p)+'" title="'+p+'">'+lbl[p]+'</button>').join('')+'</div>'+
     '<div class="rowacts"><button class="mini" data-act="mover">'+(c.lista==='Espera'?'Passar p/ lista':'Mover p/ espera')+'</button><button class="mini" data-act="editar">Editar</button></div></div>';
 }
@@ -325,7 +370,8 @@ $('#ef-nome').addEventListener('input', mostrarParecidos);
 /* ---------- ações ---------- */
 document.querySelectorAll('[role=tab]').forEach(t => t.addEventListener('click', () => {
   aba = t.dataset.tab; document.querySelectorAll('[role=tab]').forEach(x => x.setAttribute('aria-selected', x===t));
-  $('#pane-lista').classList.toggle('hidden', aba==='Respostas'); $('#pane-resp').classList.toggle('hidden', aba!=='Respostas'); render();
+  $('#pane-lista').classList.toggle('hidden', aba==='Respostas' || aba==='Famílias'); $('#pane-resp').classList.toggle('hidden', aba!=='Respostas');
+  $('#pane-fam').classList.toggle('hidden', aba!=='Famílias'); render();
 }));
 $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if(!b) return; filtro = b.dataset.f;
   document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x===b)); render(); });
@@ -356,11 +402,13 @@ function abrir(c){
   $('#ef-lista').value = c ? c.lista : (aba==='Espera' ? 'Espera' : 'Convidados');
   $('#ef-pres').value = c ? c.presenca : 'Pendente'; $('#ef-obs').value = c ? c.obs : '';
   $('#ef-del').classList.toggle('hidden', !c);
+  $('#ef-fam').innerHTML = '<option value="">Nenhuma</option>' + (D.familias||[]).map(f => '<option value="'+esc(f.codigo)+'">'+esc(f.nome)+'</option>').join('');
+  $('#ef-fam').value = c && c.familia ? c.familia : '';
   mostrarParecidos();
   $('#modal').classList.remove('hidden'); setTimeout(()=>$('#ef-nome').focus(), 50);
 }
 function fechar(){ $('#modal').classList.add('hidden'); }
-$('#add').addEventListener('click', () => abrir(null));
+$('#add').addEventListener('click', () => aba === 'Famílias' ? abrirFam(null) : abrir(null));
 $('#ef-x').addEventListener('click', fechar);
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') fechar(); });
 $('#ef').addEventListener('submit', e => {
@@ -369,7 +417,7 @@ $('#ef').addEventListener('submit', e => {
   if (mudouNome && parecidos(nome, editando ? editando.id : null).length && avisoVisto !== norm(nome)) {
     avisoVisto = norm(nome); $('#ef-ok').textContent = 'Salvar mesmo assim'; $('#ef-sim').scrollIntoView({block:'nearest'}); return;
   }
-  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim() };
+  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim(), familia: $('#ef-fam').value };
   fechar(); carregar('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
 });
 $('#ef-del').addEventListener('click', () => {
@@ -378,9 +426,69 @@ $('#ef-del').addEventListener('click', () => {
 });
 
 $('#convite').addEventListener('click', async () => {
-  const link = location.origin + '/';
+  const link = BASE;
   const txt = 'Oi! 🎈 Você está convidado para o aniversário da Maria Inês! Confirme sua presença por aqui, por favor: ' + link;
   try { await navigator.clipboard.writeText(txt); toast('Convite copiado'); } catch(_) { prompt('Copie o convite:', txt); }
+});
+
+/* ---------- famílias ---------- */
+function renderFam(){
+  const F = D.familias || [];
+  const sem = D.convidados.filter(c => c.lista==='Convidados' && !(c.familia && famNome(c.familia)));
+  $('#famhint').textContent = sem.length ? sem.length + ' convidado' + (sem.length===1?'':'s') + ' ainda sem família (recebem o link geral).' : 'Todos os convidados estão em alguma família.';
+  $('#fams').innerHTML = F.length ? F.map(f => {
+    const m = D.convidados.filter(c => c.familia === f.codigo);
+    const ok = m.filter(c => c.presenca==='Confirmado').length, no = m.filter(c => c.presenca==='Não vai').length;
+    return '<div class="fam" data-cod="'+esc(f.codigo)+'"><div class="h"><span class="nm">'+esc(f.nome)+'</span><span class="cnt">'+m.length+' pessoa'+(m.length===1?'':'s')+' · '+ok+' vão'+(no?' · '+no+' não':'')+'</span></div>'+
+      '<div class="mems">'+(m.length ? m.map(c => '<span class="mchip '+esc(c.presenca)+'">'+esc(c.nome)+'</span>').join('') : '<span class="mchip">sem pessoas</span>')+'</div>'+
+      '<div class="f"><a class="wa" href="https://wa.me/?text='+encodeURIComponent(conviteFam(f))+'" target="_blank" rel="noopener">Enviar no WhatsApp</a>'+
+      '<button data-fa="copiar">Copiar convite</button><button data-fa="editar">Editar</button></div></div>';
+  }).join('') : '<div class="empty">Nenhuma família ainda. Toque em “+ Nova família” e marque quem faz parte de cada grupo.</div>';
+}
+$('#fams').addEventListener('click', async e => {
+  const b = e.target.closest('[data-fa]'); if (!b) return;
+  const f = D.familias.find(x => x.codigo === b.closest('.fam').dataset.cod); if (!f) return;
+  if (b.dataset.fa === 'editar') return abrirFam(f);
+  try { await navigator.clipboard.writeText(conviteFam(f)); toast('Convite copiado'); } catch(_) { prompt('Copie o convite:', conviteFam(f)); }
+});
+let famEd = null, famSel = new Set();
+function abrirFam(f){
+  famEd = f || null;
+  famSel = new Set(f ? D.convidados.filter(c => c.familia === f.codigo).map(c => c.id) : []);
+  $('#ff-t').textContent = f ? 'Editar família' : 'Nova família';
+  $('#ff-nome').value = f ? f.nome : ''; $('#ff-busca').value = '';
+  $('#ff-del').classList.toggle('hidden', !f);
+  renderPick(); $('#fmodal').classList.remove('hidden'); setTimeout(() => $('#ff-nome').focus(), 50);
+}
+function renderPick(){
+  const q = norm($('#ff-busca').value.trim());
+  const cod = famEd ? famEd.codigo : '';
+  let arr = D.convidados.slice();
+  if (q) arr = arr.filter(c => norm(c.nome).includes(q));
+  // primeiro os já marcados, depois quem não tem família
+  arr.sort((a,b) => (famSel.has(b.id)-famSel.has(a.id)) || ((!a.familia||!famNome(a.familia)?0:1) - (!b.familia||!famNome(b.familia)?0:1)));
+  $('#ff-pick').innerHTML = arr.map(c => {
+    const outra = c.familia && c.familia !== cod && famNome(c.familia);
+    return '<label><input type="checkbox" data-id="'+esc(c.id)+'" '+(famSel.has(c.id)?'checked':'')+'> '+esc(c.nome)+
+      (c.idade?' <span style="color:var(--ink-soft);font-size:12px">'+esc(c.idade)+'</span>':'')+
+      '<small>'+(outra?'em '+esc(outra):'')+(c.lista==='Espera'?(outra?' · ':'')+'espera':'')+'</small></label>';
+  }).join('') || '<div class="empty">Nenhum nome encontrado.</div>';
+}
+$('#ff-busca').addEventListener('input', renderPick);
+$('#ff-pick').addEventListener('change', e => { const cb = e.target.closest('[data-id]'); if (!cb) return; cb.checked ? famSel.add(cb.dataset.id) : famSel.delete(cb.dataset.id); });
+$('#nova-fam').addEventListener('click', () => abrirFam(null));
+$('#ff-x').addEventListener('click', () => $('#fmodal').classList.add('hidden'));
+$('#fmodal').addEventListener('click', e => { if (e.target.id === 'fmodal') $('#fmodal').classList.add('hidden'); });
+$('#ff').addEventListener('submit', e => {
+  e.preventDefault(); const nome = $('#ff-nome').value.trim(); if (!nome) return;
+  const mov = D.convidados.filter(c => famSel.has(c.id) && c.familia && famNome(c.familia) && (!famEd || c.familia !== famEd.codigo));
+  if (mov.length && !confirm(mov.map(c => c.nome + ' (' + famNome(c.familia) + ')').join(', ') + ' já está em outra família e vai mudar para esta. Continuar?')) return;
+  $('#fmodal').classList.add('hidden');
+  carregar('salvarFamilia', { familia: { codigo: famEd ? famEd.codigo : '', nome, membros: Array.from(famSel) } }, famEd ? 'Família salva' : 'Família criada');
+});
+$('#ff-del').addEventListener('click', () => {
+  if (!famEd || !confirm('Excluir a família “' + famEd.nome + '”? As pessoas continuam na lista, só ficam sem família, e o link dela para de funcionar.')) return;
+  $('#fmodal').classList.add('hidden'); carregar('removerFamilia', { codigo: famEd.codigo }, 'Família excluída');
 });
 
 document.addEventListener('visibilitychange', () => { if (!document.hidden && senha && !$('#app').classList.contains('hidden')) carregar('listar'); });

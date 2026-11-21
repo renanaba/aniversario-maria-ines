@@ -50,6 +50,13 @@ textarea{min-height:76px;resize:vertical}
 .done .big{font-size:44px}
 .done h2{margin:8px 0}
 .done p{color:var(--ink-soft)}
+.mem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+.mem:first-child{border-top:0}
+.mem .nm{font-weight:600}
+.mem .tp{font-size:12px;color:var(--ink-soft)}
+.mem .choice{grid-template-columns:auto auto;gap:6px}
+.mem .choice button{padding:9px 12px;font-size:14px;border-radius:11px}
+.note{font-size:13px;color:var(--ink-soft);background:var(--field);border-radius:10px;padding:8px 11px;margin-bottom:6px}
 .linkbtn{margin-top:18px;background:none;border:0;color:var(--rose);font:inherit;font-weight:500;text-decoration:underline;cursor:pointer}
 footer{text-align:center;color:var(--ink-soft);font-size:13px;margin-top:22px}
 </style>
@@ -98,6 +105,21 @@ footer{text-align:center;color:var(--ink-soft);font-size:13px;margin-top:22px}
     </form>
   </section>
 
+  <section class="card done hidden" id="load-card"><p>Carregando convite…</p></section>
+
+  <section class="card hidden" id="fam-card">
+    <h2 id="fam-titulo">Olá!</h2>
+    <p class="sub" id="fam-sub">Marque quem vai à festa.</p>
+    <div class="note hidden" id="fam-ja">Vocês já responderam. Se algo mudou, é só alterar e enviar de novo.</div>
+    <div id="fam-lista"></div>
+    <label for="fzap">WhatsApp <small>(opcional)</small></label>
+    <input id="fzap" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="(84) 9 0000-0000">
+    <label for="frecado">Recado para a Maria Inês <small>(opcional)</small></label>
+    <textarea id="frecado" maxlength="500"></textarea>
+    <button class="primary" id="fenviar" type="button">Enviar resposta</button>
+    <div class="err" id="ferr" role="alert"></div>
+  </section>
+
   <section class="card done hidden" id="ok-card">
     <div class="big" id="ok-emoji">🎈</div>
     <h2 id="ok-titulo">Presença confirmada!</h2>
@@ -138,7 +160,7 @@ const st = { vai: '', adultos: 1, criancas: 0 };
     const [a, m, d] = EVENTO.prazo.split('-');
     $('#prazo-txt').textContent = 'Confirme até ' + d + '/' + m + '. Responda uma vez por família, por favor.';
     const fim = new Date(EVENTO.prazo + 'T00:00:00-03:00'); fim.setDate(fim.getDate() + 1);
-    if (new Date() >= fim) { $('#form-card').classList.add('hidden'); $('#fechado-card').classList.remove('hidden'); }
+    if (new Date() >= fim) { window.FECHADO = true; $('#form-card').classList.add('hidden'); $('#fechado-card').classList.remove('hidden'); }
   }
 })();
 
@@ -195,12 +217,66 @@ function mostrarOk(p){
 }
 
 $('#nova').addEventListener('click', () => {
+  if (FAM) { $('#ok-card').classList.add('hidden'); carregarFamilia(); return; }
   $('#f').reset(); st.vai = ''; st.adultos = 1; st.criancas = 0;
   $('#adultos').textContent = 1; $('#criancas').textContent = 0;
   document.querySelectorAll('.choice button').forEach(x => x.setAttribute('aria-pressed', false));
   $('#bloco-sim').classList.add('hidden');
   $('#ok-card').classList.add('hidden'); $('#form-card').classList.remove('hidden');
 });
+
+/* ---------- link da família (?f=codigo) ---------- */
+const FAM = new URLSearchParams(location.search).get('f');
+const escolhas = {};
+async function carregarFamilia(){
+  $('#form-card').classList.add('hidden'); $('#fam-card').classList.add('hidden'); $('#load-card').classList.remove('hidden');
+  try {
+    const r = await fetch(ENDPOINT_URL, { method: 'POST', body: JSON.stringify({ acao: 'familia', codigo: FAM }) });
+    const j = await r.json();
+    $('#load-card').classList.add('hidden');
+    if (!j.ok || !j.membros.length) throw new Error('familia');
+    $('#fam-titulo').textContent = 'Olá, ' + j.nome + '!';
+    const ja = j.membros.some(m => m.presenca !== 'Pendente');
+    $('#fam-ja').classList.toggle('hidden', !ja);
+    j.membros.forEach(m => { escolhas[m.id] = m.presenca === 'Pendente' ? '' : m.presenca; });
+    $('#fam-lista').innerHTML = j.membros.map(m =>
+      '<div class="mem" data-id="' + esc(m.id) + '"><div><div class="nm">' + esc(m.nome) + '</div><div class="tp">' + esc(m.tipo) + '</div></div>' +
+      '<div class="choice"><button type="button" class="sim" data-r="Confirmado" aria-pressed="' + (escolhas[m.id]==='Confirmado') + '">Vai</button>' +
+      '<button type="button" class="nao" data-r="Não vai" aria-pressed="' + (escolhas[m.id]==='Não vai') + '">Não vai</button></div></div>').join('');
+    $('#fam-card').classList.remove('hidden');
+  } catch (e) {
+    $('#load-card').classList.add('hidden'); $('#form-card').classList.remove('hidden');
+    $('#err').textContent = 'Não encontramos o convite da sua família. Preencha aqui mesmo, por favor.';
+  }
+}
+$('#fam-lista').addEventListener('click', e => {
+  const b = e.target.closest('[data-r]'); if (!b) return;
+  const row = b.closest('.mem'); escolhas[row.dataset.id] = b.dataset.r;
+  row.querySelectorAll('[data-r]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  $('#ferr').textContent = '';
+});
+$('#fenviar').addEventListener('click', async () => {
+  const falta = Object.keys(escolhas).filter(k => !escolhas[k]);
+  if (falta.length) { $('#ferr').textContent = 'Marque “Vai” ou “Não vai” para cada pessoa.'; return; }
+  const btn = $('#fenviar'); btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const r = await fetch(ENDPOINT_URL, { method: 'POST', body: JSON.stringify({ acao: 'rsvpFamilia', codigo: FAM, respostas: escolhas,
+      whatsapp: $('#fzap').value.trim(), recado: $('#frecado').value.trim() }) });
+    const j = await r.json(); if (!j.ok) throw new Error(j.erro);
+    $('#fam-card').classList.add('hidden'); $('#ok-card').classList.remove('hidden');
+    if (j.vao.length) {
+      $('#ok-emoji').textContent = '🎈'; $('#ok-titulo').textContent = 'Presença confirmada!';
+      $('#ok-msg').textContent = 'Obrigado! Anotamos: ' + j.vao.join(', ') + '.' + (j.naoVao.length ? ' Não vão: ' + j.naoVao.join(', ') + '.' : '') + ' Esperamos vocês!';
+    } else {
+      $('#ok-emoji').textContent = '💐'; $('#ok-titulo').textContent = 'Resposta recebida';
+      $('#ok-msg').textContent = 'Obrigado por avisar. Vamos sentir a falta de vocês!';
+    }
+    $('#nova').textContent = 'Alterar resposta';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) { $('#ferr').textContent = 'Não consegui enviar agora. Confira sua internet e tente de novo.'; }
+  finally { btn.disabled = false; btn.textContent = 'Enviar resposta'; }
+});
+if (FAM && !window.FECHADO) carregarFamilia();
 </script>
 </body>
 </html>
