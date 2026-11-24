@@ -131,6 +131,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .pick input{width:auto}
 .pick small{color:var(--ink-soft);margin-left:auto;font-size:11px;text-align:right}
 .tag.f{background:var(--field);color:var(--ink-soft)}
+.gift{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px}
+.gift .t{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--rose-deep);margin-bottom:6px}
+.gift .g{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 12px;align-items:baseline}
+.gift .g .h{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em}
+.gift .g b{font-variant-numeric:tabular-nums}
+.gift .g small{color:var(--ink-soft)}
+.gift .warn{margin-top:8px;font-size:13px;color:var(--wait);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gift .warn button{background:var(--wait-soft);border:1px solid #E6D29E;color:var(--wait);border-radius:9px;padding:4px 10px;font-size:13px}
+.tag.F{background:#FBE4EE;color:#A23A66} .tag.M{background:#E3ECF7;color:#2F5F8F} .tag.X{background:var(--wait-soft);color:var(--wait)}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:20}
 .busy{opacity:.55;pointer-events:none}
 </style>
@@ -157,6 +166,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 
   <div class="stats" id="stats"></div>
   <div class="extra" id="extra"></div>
+  <div class="gift" id="gift"></div>
 
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="Convidados" aria-selected="true">Lista<span class="c" id="c-conv"></span></button>
@@ -173,6 +183,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
       <button class="chip" data-f="Confirmado" aria-pressed="false">Confirmados</button>
       <button class="chip" data-f="Não vai" aria-pressed="false">Não vão</button>
       <button class="chip" data-f="Criança" aria-pressed="false">Crianças</button>
+      <button class="chip" data-f="F" aria-pressed="false">Mulheres</button>
+      <button class="chip" data-f="M" aria-pressed="false">Homens</button>
+      <button class="chip" data-f="?" aria-pressed="false">Sem sexo</button>
     </div>
     <div class="list" id="list"></div>
   </div>
@@ -193,6 +206,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <label for="ef-nome">Nome</label><input id="ef-nome" maxlength="80" required autocomplete="off">
     <div class="sim hidden" id="ef-sim" aria-live="polite"></div>
     <label for="ef-idade">Idade <small>(vazio = adulto · ex.: 5 anos, 8 meses)</small></label><input id="ef-idade" maxlength="20">
+    <label for="ef-sexo">Sexo</label>
+    <select id="ef-sexo"><option value="">Não definido</option><option value="F">Feminino</option><option value="M">Masculino</option></select>
     <label for="ef-lista">Lista</label>
     <select id="ef-lista"><option value="Convidados">Lista de convidados</option><option value="Espera">Lista de espera</option></select>
     <label for="ef-pres">Presença</label>
@@ -289,6 +304,7 @@ function render(){
   const sim = D.respostas.filter(r=>r.vai==='Sim');
   const ra = sim.reduce((s,r)=>s+r.adultos,0), rc = sim.reduce((s,r)=>s+r.criancas,0);
   $('#extra').innerHTML = 'Lista de espera: <b>' + we.t + '</b> (' + ac(we) + ') &nbsp;·&nbsp; Pelas respostas do link: <b>' + (ra+rc) + '</b> pessoas vão (' + ac({a:ra,c:rc}) + ')';
+  renderGift(conv);
   $('#c-conv').textContent = tot.t; $('#c-esp').textContent = we.t; $('#c-resp').textContent = D.respostas.length; $('#c-fam').textContent = (D.familias||[]).length;
 
   if (aba === 'Respostas') { renderResp(); return; }
@@ -297,6 +313,8 @@ function render(){
   let arr = D.convidados.filter(c => c.lista === aba);
   if (q) arr = arr.filter(c => norm(c.nome).includes(q));
   if (filtro === 'Criança') arr = arr.filter(c => c.tipo === 'Criança');
+  else if (filtro === 'F' || filtro === 'M') arr = arr.filter(c => c.sexo === filtro);
+  else if (filtro === '?') arr = arr.filter(c => !c.sexo);
   else if (filtro) arr = arr.filter(c => c.presenca === filtro);
   $('#list').innerHTML = arr.length ? arr.map(linha).join('') : '<div class="empty">' + (aba==='Espera' && !q && !filtro ? 'Ninguém na lista de espera ainda. Use “+ Adicionar” e escolha “Lista de espera”.' : 'Nenhum nome encontrado.') + '</div>';
 }
@@ -305,7 +323,7 @@ function stat(cls,l,x){ return '<div class="stat '+cls+'"><div class="l">'+l+'</
 function linha(c){
   const P = ['Confirmado','Pendente','Não vai'], lbl = {'Confirmado':'✓ Vai','Pendente':'?','Não vai':'✗ Não'};
   return '<div class="row" data-id="'+esc(c.id)+'"><div class="who"><div class="nm">'+esc(c.nome)+'</div><div class="meta">'+
-    '<span class="tag '+(c.tipo==='Criança'?'c':'a')+'">'+c.tipo+'</span>'+(c.idade?'<span>'+esc(c.idade)+'</span>':'')+(c.familia&&famNome(c.familia)?'<span class="tag f">'+esc(famNome(c.familia))+'</span>':'')+(c.obs?'<span>· '+esc(c.obs)+'</span>':'')+'</div></div>'+
+    '<span class="tag '+(c.tipo==='Criança'?'c':'a')+'">'+c.tipo+'</span>'+'<span class="tag '+(c.sexo||'X')+'">'+(c.sexo==='F'?'♀ F':c.sexo==='M'?'♂ M':'sexo?')+'</span>'+(c.idade?'<span>'+esc(c.idade)+'</span>':'')+(c.familia&&famNome(c.familia)?'<span class="tag f">'+esc(famNome(c.familia))+'</span>':'')+(c.obs?'<span>· '+esc(c.obs)+'</span>':'')+'</div></div>'+
     '<div class="pres">'+P.map(p=>'<button data-p="'+p+'" aria-pressed="'+(c.presenca===p)+'" title="'+p+'">'+lbl[p]+'</button>').join('')+'</div>'+
     '<div class="rowacts"><button class="mini" data-act="mover">'+(c.lista==='Espera'?'Passar p/ lista':'Mover p/ espera')+'</button><button class="mini" data-act="editar">Editar</button></div></div>';
 }
@@ -365,7 +383,9 @@ function mostrarParecidos(){
   box.classList.remove('hidden');
   return r;
 }
-$('#ef-nome').addEventListener('input', mostrarParecidos);
+$('#ef-nome').addEventListener('input', () => { mostrarParecidos(); if (!sexoManual) $('#ef-sexo').value = palpiteSexo($('#ef-nome').value); });
+let sexoManual = false;
+$('#ef-sexo').addEventListener('change', () => { sexoManual = true; });
 
 /* ---------- ações ---------- */
 document.querySelectorAll('[role=tab]').forEach(t => t.addEventListener('click', () => {
@@ -404,6 +424,7 @@ function abrir(c){
   $('#ef-del').classList.toggle('hidden', !c);
   $('#ef-fam').innerHTML = '<option value="">Nenhuma</option>' + (D.familias||[]).map(f => '<option value="'+esc(f.codigo)+'">'+esc(f.nome)+'</option>').join('');
   $('#ef-fam').value = c && c.familia ? c.familia : '';
+  $('#ef-sexo').value = c ? (c.sexo || '') : ''; sexoManual = !!(c && c.sexo);
   mostrarParecidos();
   $('#modal').classList.remove('hidden'); setTimeout(()=>$('#ef-nome').focus(), 50);
 }
@@ -417,7 +438,7 @@ $('#ef').addEventListener('submit', e => {
   if (mudouNome && parecidos(nome, editando ? editando.id : null).length && avisoVisto !== norm(nome)) {
     avisoVisto = norm(nome); $('#ef-ok').textContent = 'Salvar mesmo assim'; $('#ef-sim').scrollIntoView({block:'nearest'}); return;
   }
-  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim(), familia: $('#ef-fam').value };
+  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim(), familia: $('#ef-fam').value, sexo: $('#ef-sexo').value };
   fechar(); carregar('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
 });
 $('#ef-del').addEventListener('click', () => {
@@ -429,6 +450,43 @@ $('#convite').addEventListener('click', async () => {
   const link = BASE;
   const txt = 'Oi! 🎈 Você está convidado para o aniversário da Maria Inês! Confirme sua presença por aqui, por favor: ' + link;
   try { await navigator.clipboard.writeText(txt); toast('Convite copiado'); } catch(_) { prompt('Copie o convite:', txt); }
+});
+
+/* ---------- sexo ---------- */
+const NOMES_F = 'eliene isabel gabi laura erika polly bia denise ligia angelica sandrinha marleide tania aninha stella stela teresa ines raquel rute ruth beatriz alice ester carmem carmen lais thais iris nicole isabelle gisele cleide irene simone aline jaqueline michele rose ivone socorro conceicao luz elaine solange marlene darlene eliane liliane viviane cristiane rosane edilene jane joice evelyn karen ellen hellen mirian miriam judite lurdes lourdes neide nilde clarisse beth bete lu dani'.split(' ');
+const NOMES_M = 'guilherme matias matheus ravi alvaro gilmar dede gabriel luis tiago flavio jamerson joao felipe julio miguel vinicius joaquim kennedy lucas adson berg betinho davi rafael daniel samuel israel jose andre henrique arthur artur bernardo heitor enzo noah isaac levi caio ruan renan jonas elias moises abel ismael natan wesley wellington edson nelson robson anderson emerson jefferson cleber vitor igor dimas tomas nicolas ezequiel manoel raul pedro paulo marcos carlos francisco antonio junior ze zeca chico'.split(' ');
+function palpiteSexo(nome){
+  const n = norm(nome).replace(/[^a-z. ]/g,' ').trim(); if (!n) return '';
+  const t = n.split(/\s+/);
+  if (/^(dona|tia|vo|vovo|madrinha|irma)\b/.test(n) && t[0] !== 'vo') return 'F';
+  if (/^(seu|tio|padrinho|frei|padre|pe\.?)\b/.test(n)) return 'M';
+  if (t[0] === 'm.') return 'F';      // M. Clara = Maria Clara
+  if (t[0] === 'j.') return 'M';      // J. Pedro = João Pedro
+  const p = t[0].replace(/\./g,'');
+  if (NOMES_F.includes(p)) return 'F';
+  if (NOMES_M.includes(p)) return 'M';
+  if (p.length >= 3 && p.endsWith('a')) return 'F';
+  if (p.length >= 3 && p.endsWith('o')) return 'M';
+  return '';
+}
+function renderGift(conv){
+  const linha = (rot, arr) => { const conf = arr.filter(c => c.presenca==='Confirmado');
+    const ad = x => x.filter(c=>c.tipo==='Adulto').length, cr = x => x.filter(c=>c.tipo==='Criança').length;
+    return '<span>'+rot+'</span><span><b>'+arr.length+'</b> <small>('+ad(arr)+' ad. · '+cr(arr)+' cri.)</small></span><span><b>'+conf.length+'</b> <small>('+ad(conf)+' ad. · '+cr(conf)+' cri.)</small></span>'; };
+  const F = conv.filter(c=>c.sexo==='F'), M = conv.filter(c=>c.sexo==='M'), X = conv.filter(c=>!c.sexo);
+  const sug = X.filter(c => palpiteSexo(c.nome));
+  $('#gift').innerHTML = '<div class="t">🎁 Por sexo (lembrancinhas)</div><div class="g"><span class="h"></span><span class="h">Convidados</span><span class="h">Confirmados</span>'+
+    linha('♀ Mulheres', F) + linha('♂ Homens', M) + '</div>' +
+    (X.length ? '<div class="warn">'+X.length+' sem sexo definido'+(sug.length ? ' <button id="auto-sexo">Preencher pelo nome ('+sug.length+')</button>' : '')+' <button id="ver-sem">Ver quem</button></div>' : '');
+}
+$('#gift').addEventListener('click', e => {
+  if (e.target.id === 'ver-sem') { filtro = '?'; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x.dataset.f==='?')); if (aba!=='Convidados') document.querySelector('[data-tab="Convidados"]').click(); else render(); return; }
+  if (e.target.id !== 'auto-sexo') return;
+  const X = D.convidados.filter(c => !c.sexo), mapa = {}; let f = 0, m = 0;
+  X.forEach(c => { const g = palpiteSexo(c.nome); if (g) { mapa[c.id] = g; g==='F' ? f++ : m++; } });
+  const resto = X.filter(c => !mapa[c.id]).map(c => c.nome);
+  if (!confirm('Vou marcar '+f+' como feminino e '+m+' como masculino pelo nome.' + (resto.length ? '\n\nFicam para você marcar: ' + resto.join(', ') : '') + '\n\nDepois dá para corrigir qualquer um em “Editar”. Continuar?')) return;
+  carregar('definirSexo', { mapa }, 'Sexo preenchido');
 });
 
 /* ---------- famílias ---------- */
