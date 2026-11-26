@@ -212,6 +212,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <div class="acts">
       <button class="ghost" id="convite">Copiar convite</button>
       <button class="ghost" id="atualizar" aria-label="Atualizar">↻</button>
+      <button class="ghost" id="sair" aria-label="Sair">Sair</button>
     </div>
   </div>
 
@@ -399,14 +400,22 @@ const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycby6SFxlqkHumnmbWpC
 
 const $ = s => document.querySelector(s);
 let senha = '';
-try { senha = sessionStorage.getItem('senhaLista') || ''; } catch (_) {}
-let D = { convidados: [], respostas: [], familias: [], checklist: [], gastos: [], config: { orcamento: 2000 } };
+const ls = {
+  get(k){ try { return localStorage.getItem(k); } catch (_) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (_) {} },
+  del(k){ try { localStorage.removeItem(k); } catch (_) {} }
+};
+senha = ls.get('senhaLista') || '';
+let D = { convidados: [], respostas: [], familias: [], checklist: [], gastos: [], fornecedores: [], config: { orcamento: 2000 } };
 let sec = 'conv';
 let aba = 'Convidados', filtro = '', editando = null;
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
-function toast(t){ const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2200); }
+function toast(t){ document.querySelectorAll('.toast').forEach(x => x.remove()); const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2200); }
+function tipoDe(idade){ const a = String(idade||'').toLowerCase().trim(); if (!a) return 'Adulto'; if (/m[eê]s/.test(a)) return 'Criança'; const m = a.match(/\d+/); return (m && +m[0] <= 12) ? 'Criança' : 'Adulto'; }
+function novoId(p){ return p + Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,'0')).join('').toUpperCase().slice(0, 9); }
+function upsert(lista, obj){ const i = lista.findIndex(x => x.id === obj.id); if (i >= 0) lista[i] = Object.assign({}, lista[i], obj); else lista.push(obj); }
 
 async function api(acao, extra){
   const r = await fetch(ENDPOINT_URL, { method:'POST', body: JSON.stringify(Object.assign({ acao, senha }, extra||{})) });
@@ -414,62 +423,76 @@ async function api(acao, extra){
   if (!j.ok) { const e = new Error(j.erro || 'falha'); e.code = j.erro; throw e; }
   return j;
 }
+// o servidor devolve só o que mudou; mescla no que já temos e guarda neste aparelho
+function mesclar(j){ const x = Object.assign({}, j); delete x.ok; Object.assign(D, x); normD(); ls.set('festaCache', JSON.stringify(D)); }
 
 async function carregar(acao, extra, msg){
   $('#app').classList.add('busy');
   try {
-    const j = await api(acao || 'listar', extra);
-    D = j; normD(); $('#sync').textContent = 'Atualizado ' + (j.atualizado || '');
+    mesclar(await api(acao || 'listar', extra));
+    $('#sync').textContent = 'Atualizado ' + (D.atualizado || '');
     render(); if (msg) toast(msg);
   } catch (e) {
     if (e.code === 'senha') return sair('Senha incorreta.');
     toast('Não consegui salvar/atualizar. Tente de novo.');
   } finally { $('#app').classList.remove('busy'); }
 }
+// atualiza sem travar a tela (ao abrir e ao voltar para o app)
+let atualizando = false;
+async function atualizarFundo(){
+  if (atualizando || enviando) return; atualizando = true;
+  $('#sync').textContent = 'Atualizando…';
+  try { const j = await api('listar'); if (!enviando && !fila.length) { mesclar(j); render(); } $('#sync').textContent = 'Atualizado ' + (D.atualizado || ''); }
+  catch (e) { if (e.code === 'senha') sair('Senha incorreta.'); else $('#sync').textContent = 'Sem conexão · mostrando a última versão'; }
+  finally { atualizando = false; }
+}
 
-/* salvamento rápido em segundo plano: a tela não trava, os toques entram numa fila */
+/* salvamento em segundo plano: a tela atualiza na hora e as alterações vão numa fila */
 const fila = []; let enviando = false;
-function salvarRapido(acao, extra){
+function salvarRapido(acao, extra, msg){
+  ls.set('festaCache', JSON.stringify(D));
   fila.push({ acao, extra: JSON.parse(JSON.stringify(extra)) });
+  if (msg) toast(msg);
   if (!enviando) processarFila();
 }
 async function processarFila(){
   enviando = true; $('#sync').textContent = 'Salvando… (' + fila.length + ')';
-  let ultimo = null;
+  const acum = {};
   while (fila.length) {
-    const t = fila.shift();
-    try { ultimo = await api(t.acao, t.extra); }
+    const t = fila[0];
+    try { Object.assign(acum, await api(t.acao, t.extra)); fila.shift(); }
     catch (e) {
       if (e.code === 'senha') { enviando = false; fila.length = 0; return sair('Senha incorreta.'); }
+      if (!t.tentou) { t.tentou = true; await new Promise(z => setTimeout(z, 1500)); continue; }   // tenta de novo uma vez
       toast('Não consegui salvar uma alteração. Recarregando…'); fila.length = 0; enviando = false; return carregar('listar');
     }
     $('#sync').textContent = fila.length ? 'Salvando… (' + fila.length + ')' : 'Salvando…';
   }
   enviando = false;
-  if (ultimo) { D = ultimo; normD(); render(); $('#sync').textContent = '✓ Salvo · ' + (ultimo.atualizado || ''); }
+  mesclar(acum); render(); $('#sync').textContent = '✓ Salvo · ' + (D.atualizado || '');
 }
 window.addEventListener('beforeunload', e => { if (enviando || fila.length) { e.preventDefault(); e.returnValue = ''; } });
 
 function sair(m){
-  try { sessionStorage.removeItem('senhaLista'); } catch(_){}
+  ls.del('senhaLista'); ls.del('festaCache');
   senha=''; $('#app').classList.add('hidden'); $('#add').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lerr').textContent = m || '';
 }
 
 $('#loginf').addEventListener('submit', async e => {
-  e.preventDefault(); senha = $('#senha').value; $('#lerr').textContent=''; $('#entrar').disabled = true;
+  e.preventDefault(); senha = $('#senha').value; $('#lerr').textContent=''; $('#entrar').disabled = true; $('#entrar').textContent = 'Entrando…';
   try {
-    D = await api('listar');
-    try { sessionStorage.setItem('senhaLista', senha); } catch(_){}
+    const j = await api('listar');
+    ls.set('senhaLista', senha); mesclar(j);
     entrar();
   } catch (x) { $('#lerr').textContent = x.code === 'senha' ? 'Senha incorreta.' : 'Sem conexão com a planilha. Tente de novo.'; }
-  finally { $('#entrar').disabled = false; }
+  finally { $('#entrar').disabled = false; $('#entrar').textContent = 'Entrar'; }
 });
 
 function famNome(cod){ const f = (D.familias||[]).find(x => x.codigo === cod); return f ? f.nome : ''; }
 const BASE = new URL('../', location.href).href;
 function linkFam(f){ return BASE + '?f=' + f.codigo; }
 function conviteFam(f){ return 'Oi! 🎈 ' + f.nome + ', vocês estão convidados para o aniversário da Maria Inês! Confirmem aqui quem vai, por favor: ' + linkFam(f); }
-function normD(){ D.familias = D.familias || []; D.checklist = D.checklist || []; D.gastos = D.gastos || []; D.fornecedores = D.fornecedores || []; D.config = D.config || { orcamento: 2000 }; }
+function normD(){ D.convidados = D.convidados || []; D.respostas = D.respostas || []; D.familias = D.familias || []; D.checklist = D.checklist || []; D.gastos = D.gastos || []; D.fornecedores = D.fornecedores || []; D.config = D.config || { orcamento: 2000 }; }
 function entrar(){
   normD();
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#add').classList.remove('hidden');
@@ -481,7 +504,9 @@ function conta(arr){ return { t: arr.length, a: arr.filter(c=>c.tipo==='Adulto')
 function ac(x){ return x.a + ' adulto' + (x.a===1?'':'s') + ' · ' + x.c + ' criança' + (x.c===1?'':'s'); }
 
 function render(){
-  renderCheck(); renderFin(); renderFesta();
+  if (sec === 'festa') return renderFesta();
+  if (sec === 'check') return renderCheck();
+  if (sec === 'fin') return renderFin();
   const conv = D.convidados.filter(c => c.lista === 'Convidados');
   renderGift(conv);
   const esp = D.convidados.filter(c => c.lista === 'Espera');
@@ -581,6 +606,7 @@ $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip')
   document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x===b)); render(); });
 $('#busca').addEventListener('input', render);
 $('#atualizar').addEventListener('click', () => carregar('listar', null, 'Atualizado'));
+$('#sair').addEventListener('click', () => { if (enviando || fila.length) return toast('Espere terminar de salvar'); if (confirm('Sair deste aparelho? Vai pedir a senha de novo.')) sair(''); });
 
 $('#list').addEventListener('click', e => {
   const row = e.target.closest('.row'); if (!row) return;
@@ -591,7 +617,8 @@ $('#list').addEventListener('click', e => {
     salvarRapido('salvar', { convidado: c });
   } else if (a && a.dataset.act === 'mover') {
     const novo = Object.assign({}, c, { lista: c.lista==='Espera' ? 'Convidados' : 'Espera' });
-    carregar('salvar', { convidado: novo }, novo.lista==='Espera' ? c.nome + ' foi para a lista de espera' : c.nome + ' entrou na lista');
+    upsert(D.convidados, novo); render();
+    salvarRapido('salvar', { convidado: novo }, novo.lista==='Espera' ? c.nome + ' foi para a lista de espera' : c.nome + ' entrou na lista');
   } else if (a && a.dataset.act === 'editar') abrir(c);
   else if (a && a.dataset.act === 'gift') {
     c.lembranca = !c.lembranca; render();
@@ -600,7 +627,9 @@ $('#list').addEventListener('click', e => {
 });
 
 $('#resps').addEventListener('change', e => {
-  const cb = e.target.closest('[data-linha]'); if (cb) carregar('conferir', { linha: +cb.dataset.linha, valor: cb.checked });
+  const cb = e.target.closest('[data-linha]'); if (!cb) return;
+  const r = D.respostas.find(x => x.linha === +cb.dataset.linha); if (r) r.conferido = cb.checked; render();
+  salvarRapido('conferir', { linha: +cb.dataset.linha, valor: cb.checked });
 });
 
 function abrir(c){
@@ -627,11 +656,14 @@ $('#ef').addEventListener('submit', e => {
     avisoVisto = norm(nome); $('#ef-ok').textContent = 'Salvar mesmo assim'; $('#ef-sim').scrollIntoView({block:'nearest'}); return;
   }
   const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim(), familia: $('#ef-fam').value, lembranca: $('#ef-gift').checked };
-  fechar(); carregar('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
+  if (!c.id) c.id = novoId('G');
+  c.tipo = tipoDe(c.idade); fechar(); upsert(D.convidados, c); render();
+  salvarRapido('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
 });
 $('#ef-del').addEventListener('click', () => {
   if (!editando || !confirm('Remover ' + editando.nome + ' da lista?')) return;
-  const n = editando.nome; fechar(); carregar('remover', { id: editando.id }, n + ' removido');
+  const n = editando.nome, id = editando.id; fechar(); D.convidados = D.convidados.filter(x => x.id !== id); render();
+  salvarRapido('remover', { id }, n + ' removido');
 });
 
 $('#convite').addEventListener('click', async () => {
@@ -707,6 +739,7 @@ document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click',
   ['conv','festa','check','fin'].forEach(k => $('#sec-' + k).classList.toggle('hidden', k !== sec));
   $('#titulo-sec').textContent = { conv: 'Convidados', festa: 'Definições da festa', check: 'Checklist', fin: 'Financeiro' }[sec];
   $('#convite').classList.toggle('hidden', sec !== 'conv');
+  render();
   $('#add').textContent = sec === 'festa' ? '+ Item' : sec === 'check' ? '+ Tarefa' : sec === 'fin' ? '+ Gasto' : '+ Adicionar';
   window.scrollTo({ top: 0 });
 }));
@@ -780,7 +813,8 @@ $('#lf').addEventListener('submit', e => {
   D.convidados.forEach(c => { const v = lSel.has(c.id); if (v !== !!c.lembranca) mapa[c.id] = v; });
   $('#lmodal').classList.add('hidden');
   if (!Object.keys(mapa).length) return toast('Nada mudou');
-  carregar('definirLembranca', { mapa }, '🎁 Lembranças salvas');
+  D.convidados.forEach(c => { if (c.id in mapa) c.lembranca = !!mapa[c.id]; }); render();
+  salvarRapido('definirLembranca', { mapa }, '🎁 Lembranças salvas');
 });
 
 /* ---------- sugestão de nomes de família ---------- */
@@ -819,7 +853,8 @@ $('#sf').addEventListener('submit', e => {
   document.querySelectorAll('#spick [data-cod]').forEach(cb => { if (cb.checked) { const v = $('#spick [data-nome="' + cb.dataset.cod + '"]').value.trim(); if (v) mapa[cb.dataset.cod] = v; } });
   $('#smodal').classList.add('hidden');
   if (!Object.keys(mapa).length) return toast('Nada mudou');
-  carregar('renomearFamilias', { mapa }, Object.keys(mapa).length + ' famílias renomeadas');
+  D.familias.forEach(f => { if (mapa[f.codigo]) f.nome = mapa[f.codigo]; }); render();
+  salvarRapido('renomearFamilias', { mapa }, Object.keys(mapa).length + ' famílias renomeadas');
 });
 
 /* ---------- checklist ---------- */
@@ -874,10 +909,13 @@ $('#cmodal').addEventListener('click', e => { if (e.target.id === 'cmodal') $('#
 $('#cf').addEventListener('submit', e => {
   e.preventDefault(); const tarefa = $('#cf-tarefa').value.trim(); if (!tarefa) return;
   const item = { id: itemEd ? itemEd.id : '', tarefa, categoria: $('#cf-cat').value.trim(), prazo: $('#cf-prazo').value, resp: $('#cf-resp').value.trim(), obs: $('#cf-obs').value.trim(), feito: $('#cf-feito').checked };
-  $('#cmodal').classList.add('hidden'); carregar('salvarItem', { tabela: 'checklist', item }, itemEd ? 'Tarefa salva' : 'Tarefa adicionada');
+  if (!item.id) item.id = novoId('C');
+  $('#cmodal').classList.add('hidden'); upsert(D.checklist, item); render();
+  salvarRapido('salvarItem', { tabela: 'checklist', item }, itemEd ? 'Tarefa salva' : 'Tarefa adicionada');
 });
 $('#cf-del').addEventListener('click', () => { if (!itemEd || !confirm('Excluir a tarefa “' + itemEd.tarefa + '”?')) return;
-  $('#cmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'checklist', id: itemEd.id }, 'Tarefa excluída'); });
+  const id = itemEd.id; $('#cmodal').classList.add('hidden'); D.checklist = D.checklist.filter(x => x.id !== id); render();
+  salvarRapido('removerItem', { tabela: 'checklist', id }, 'Tarefa excluída'); });
 
 /* ---------- checklist sugerido (importar) ---------- */
 const DATA_FESTA = '2027-03-23';
@@ -964,9 +1002,9 @@ $('#imp-check').addEventListener('click', async () => {
   if (!confirm('Cronograma até a festa (23/03/2027):\n\n• ' + add.length + ' tarefas novas\n• ' + upd.length + ' tarefas com prazo/etapa atualizados\n• ' + rem.length + ' tarefas sugeridas antigas removidas (só as não feitas)\n\nTarefas que você criou ou já marcou como feitas ficam. Leva uns 2 minutos — deixe a página aberta.')) return;
   importando = true; const btn = $('#imp-check'); const tot = add.length + upd.length + rem.length; let n = 0;
   try {
-    for (const x of rem) { btn.textContent = 'Organizando… ' + (++n) + '/' + tot; D = await api('removerItem', { tabela: 'checklist', id: x.id }); }
-    for (const x of upd) { btn.textContent = 'Organizando… ' + (++n) + '/' + tot; D = await api('salvarItem', { tabela: 'checklist', item: x }); }
-    for (const x of add) { btn.textContent = 'Organizando… ' + (++n) + '/' + tot; D = await api('salvarItem', { tabela: 'checklist', item: Object.assign({ resp: '', obs: '', feito: false }, x) }); }
+    for (const x of rem) { btn.textContent = 'Organizando… ' + (++n) + '/' + tot; mesclar(await api('removerItem', { tabela: 'checklist', id: x.id })); }
+    for (const x of upd) { btn.textContent = 'Organizando… ' + (++n) + '/' + tot; mesclar(await api('salvarItem', { tabela: 'checklist', item: x })); }
+    for (const x of add) { btn.textContent = 'Organizando… ' + (++n) + '/' + tot; mesclar(await api('salvarItem', { tabela: 'checklist', item: Object.assign({ resp: '', obs: '', feito: false }, x) })); }
     normD(); render(); toast('Cronograma pronto');
   } catch (e) {
     normD(); render();
@@ -1031,10 +1069,13 @@ $('#pf').addEventListener('submit', e => {
   const it = { id: fornEd ? fornEd.id : '', item, status: $('#pf-status').value, escolha: $('#pf-escolha').value.trim(), contato: $('#pf-contato').value.trim(),
     detalhes: $('#pf-detalhes').value.trim(), entrega: $('#pf-entrega').value.trim(), valor: numBR($('#pf-valor').value), pago: numBR($('#pf-pago').value), obs: $('#pf-obs').value.trim() };
   if (it.pago > it.valor && it.valor > 0 && !confirm('O valor pago está maior que o total. Salvar mesmo assim?')) return;
-  $('#pmodal').classList.add('hidden'); carregar('salvarItem', { tabela: 'fornecedores', item: it }, fornEd ? 'Salvo' : 'Item adicionado');
+  if (!it.id) it.id = novoId('P');
+  $('#pmodal').classList.add('hidden'); upsert(D.fornecedores, it); render();
+  salvarRapido('salvarItem', { tabela: 'fornecedores', item: it }, fornEd ? 'Salvo' : 'Item adicionado');
 });
 $('#pf-del').addEventListener('click', () => { if (!fornEd || !confirm('Excluir “' + fornEd.item + '”?')) return;
-  $('#pmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'fornecedores', id: fornEd.id }, 'Item excluído'); });
+  const id = fornEd.id; $('#pmodal').classList.add('hidden'); D.fornecedores = D.fornecedores.filter(x => x.id !== id); render();
+  salvarRapido('removerItem', { tabela: 'fornecedores', id }, 'Item excluído'); });
 
 /* ---------- financeiro ---------- */
 const CATS_G = ['Comida','Bolo e doces','Bebidas','Decoração','Lembranças','Descartáveis','Local e aluguel','Roupa','Outros'];
@@ -1072,7 +1113,8 @@ $('#fcards').addEventListener('click', e => {
   if (!e.target.closest('#f-orc')) return;
   const v = prompt('Orçamento total da festa (R$):', String((D.config||{}).orcamento || 0).replace('.', ','));
   if (v === null) return; const n = numBR(v); if (!(n >= 0)) return;
-  carregar('salvarConfig', { chave: 'orcamento', valor: n }, 'Orçamento atualizado');
+  D.config.orcamento = n; render();
+  salvarRapido('salvarConfig', { chave: 'orcamento', valor: n }, 'Orçamento atualizado');
 });
 $('#flist').addEventListener('click', e => { const r = e.target.closest('.gasto'); if (!r) return; const g = D.gastos.find(x => x.id === r.dataset.id); if (g) abrirGasto(g); });
 function abrirGasto(g){
@@ -1090,14 +1132,22 @@ $('#gf').addEventListener('submit', e => {
   e.preventDefault(); const descricao = $('#gf-desc').value.trim(), valor = numBR($('#gf-valor').value);
   if (!descricao) return; if (!(valor > 0)) { $('#gf-valor').focus(); return toast('Informe o valor'); }
   const item = { id: gastoEd ? gastoEd.id : '', descricao, valor, categoria: $('#gf-cat').value.trim(), data: $('#gf-data').value, status: $('#gf-status').value, obs: $('#gf-obs').value.trim() };
-  $('#gmodal').classList.add('hidden'); carregar('salvarItem', { tabela: 'gastos', item }, gastoEd ? 'Gasto salvo' : 'Gasto registrado');
+  if (!item.id) item.id = novoId('F');
+  $('#gmodal').classList.add('hidden'); upsert(D.gastos, item); render();
+  salvarRapido('salvarItem', { tabela: 'gastos', item }, gastoEd ? 'Gasto salvo' : 'Gasto registrado');
 });
 $('#gf-del').addEventListener('click', () => { if (!gastoEd || !confirm('Excluir o gasto “' + gastoEd.descricao + '”?')) return;
-  $('#gmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'gastos', id: gastoEd.id }, 'Gasto excluído'); });
+  const id = gastoEd.id; $('#gmodal').classList.add('hidden'); D.gastos = D.gastos.filter(x => x.id !== id); render();
+  salvarRapido('removerItem', { tabela: 'gastos', id }, 'Gasto excluído'); });
 
-document.addEventListener('visibilitychange', () => { if (!document.hidden && !enviando && senha && !$('#app').classList.contains('hidden')) carregar('listar'); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && senha && !$('#app').classList.contains('hidden')) atualizarFundo(); });
 
-if (senha) api('listar').then(j => { D = j; entrar(); }).catch(e => sair(e.code==='senha' ? 'Senha incorreta.' : ''));
+// abre na hora com a última versão salva neste aparelho e atualiza por trás
+if (senha) {
+  let cache = null; try { cache = JSON.parse(ls.get('festaCache') || 'null'); } catch (_) {}
+  if (cache && cache.convidados) { D = cache; entrar(); atualizarFundo(); }
+  else api('listar').then(j => { mesclar(j); entrar(); }).catch(e => sair(e.code==='senha' ? 'Senha incorreta.' : ''));
+}
 </script>
 </body>
 </html>
