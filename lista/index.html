@@ -163,6 +163,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .citem .tx .m{font-size:12px;color:var(--ink-soft)}
 .citem.done .tx>div:first-child{text-decoration:line-through;color:var(--ink-soft)}
 .citem .late{color:#B3261E;font-weight:600}
+.citem .subtg{flex:0 0 auto;background:var(--field);border:0;border-radius:20px;padding:3px 9px;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.citem .arr{display:flex;gap:4px;flex:0 0 auto}
+.citem .arr button{width:32px;height:30px;border:1px solid var(--line);background:var(--panel);border-radius:8px;font-size:15px;color:var(--rose-deep)}
+.subs{background:#FCF8F6;border-top:1px dashed var(--line)}
+.citem.sub{padding:8px 12px 8px 38px;border-top:0}
+.citem.sub input{width:18px;height:18px}
+.citem.sub .tx{font-size:14px}
+#ord-check[aria-pressed=true]{background:var(--rose);color:#fff;border-color:var(--rose)}
+.subed{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:6px;align-items:center;margin-top:6px}
+.subed input[type=checkbox]{width:20px;height:20px;accent-color:var(--ok)}
+.subed input[type=text]{padding:8px 10px;font-size:14px}
+.subed button{width:32px;height:34px;border:1px solid var(--line);background:var(--panel);border-radius:8px;color:var(--ink-soft)}
+.addsub{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}
+.addsub button{border:0;border-radius:10px;padding:0 12px;background:var(--rose-soft);color:var(--rose-deep);font-weight:600}
 /* financeiro */
 .fin{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media(min-width:640px){.fin{grid-template-columns:repeat(4,1fr)}}
@@ -257,7 +271,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 
   <div id="sec-check" class="hidden">
     <div class="prog" id="cprog"></div>
-    <div class="tools"><button class="ghost" id="imp-check">📅 Importar cronograma até 23/03</button></div>
+    <div class="tools"><button class="ghost" id="imp-check">📅 Importar cronograma até 23/03</button><button class="ghost" id="ord-check" aria-pressed="false">↕ Ordenar</button></div>
     <div class="chips" id="cchips">
       <button class="chip" data-cf="" aria-pressed="true">Todas</button>
       <button class="chip" data-cf="p" aria-pressed="false">A fazer</button>
@@ -341,7 +355,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 </div>
 
 <div class="modal hidden" id="cmodal" role="dialog" aria-modal="true">
-  <form class="sheet" id="cf">
+  <form class="sheet" id="cf" style="max-height:92vh;overflow:auto">
     <h2 id="cf-t">Nova tarefa</h2>
     <label for="cf-tarefa">Tarefa</label><input id="cf-tarefa" maxlength="200" required>
     <label for="cf-cat">Categoria</label><input id="cf-cat" list="ccats" maxlength="40" placeholder="Ex.: Comida">
@@ -349,7 +363,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <label for="cf-prazo">Prazo <small>(opcional)</small></label><input id="cf-prazo" type="date">
     <label for="cf-resp">Responsável <small>(opcional)</small></label><input id="cf-resp" maxlength="60">
     <label for="cf-obs">Observação</label><input id="cf-obs" maxlength="300">
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="cf-feito" style="width:auto"> Feito</label>
+    <label for="cf-novo-sub">Subitens <small>(cada um com seu ✓)</small></label>
+    <div id="cf-subs"></div>
+    <div class="addsub"><input id="cf-novo-sub" maxlength="200" placeholder="Novo subitem…" autocomplete="off"><button type="button" id="cf-add-sub">+ Adicionar</button></div>
+    <label id="cf-feito-wrap" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="cf-feito" style="width:auto"> Feito</label>
     <div class="btns"><button type="button" class="btn-d hidden" id="cf-del">Excluir</button><button type="button" class="btn-s" id="cf-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
   </form>
 </div>
@@ -463,6 +480,7 @@ async function processarFila(){
     try { Object.assign(acum, await api(t.acao, t.extra)); fila.shift(); }
     catch (e) {
       if (e.code === 'senha') { enviando = false; fila.length = 0; return sair('Senha incorreta.'); }
+      if (e.code === 'acao' || e.code === 'tabela' || e.code === 'ordem') { fila.length = 0; enviando = false; alert('O script da planilha ainda é a versão antiga. Atualize o Code.gs no Apps Script (Nova versão).'); return carregar('listar'); }
       if (!t.tentou) { t.tentou = true; await new Promise(z => setTimeout(z, 1500)); continue; }   // tenta de novo uma vez
       toast('Não consegui salvar uma alteração. Recarregando…'); fila.length = 0; enviando = false; return carregar('listar');
     }
@@ -857,64 +875,139 @@ $('#sf').addEventListener('submit', e => {
   salvarRapido('renomearFamilias', { mapa }, Object.keys(mapa).length + ' famílias renomeadas');
 });
 
-/* ---------- checklist ---------- */
+/* ---------- checklist (com subitens e ordem) ---------- */
 const ORDEM_CAT = ['Convidados','Local','Comida','Decoração','Lembranças','Dia da festa','Depois'];
-let cfiltro = '', itemEd = null;
+let cfiltro = '', itemEd = null, ordenando = false, subsEd = [];
+let fechados = new Set(); try { fechados = new Set(JSON.parse(ls.get('checkFechados') || '[]')); } catch (_) {}
 function dataBR(iso){ const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] : ''; }
 function hojeISO(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
-function renderCheck(){
-  const L = D.checklist || [], feitas = L.filter(x => x.feito).length, pct = L.length ? Math.round(feitas / L.length * 100) : 0;
-  const dias = Math.round((new Date(DATA_FESTA + 'T12:00:00') - new Date(hojeISO() + 'T12:00:00')) / 864e5);
-  const prox = L.filter(x => !x.feito && x.prazo).sort((a,b) => a.prazo.localeCompare(b.prazo))[0];
-  const atras = L.filter(x => !x.feito && x.prazo && x.prazo < hojeISO()).length;
-  $('#cprog').innerHTML = '<div class="t"><span>🎂 ' + (dias > 0 ? 'Faltam <b>' + dias + '</b> dias' : dias === 0 ? '<b>É hoje!</b>' : 'Festa realizada') + ' · 23/03/2027</span><span>' + pct + '%</span></div>' +
-    '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
-    '<div class="t" style="margin:8px 0 0;font-size:13px;color:var(--ink-soft)"><span><b>' + feitas + '</b> de ' + L.length + ' feitas' + (atras ? ' · <span class="late">' + atras + ' atrasada' + (atras>1?'s':'') + '</span>' : '') + '</span>' +
-    (prox ? '<span>Próximo prazo: ' + dataBR(prox.prazo) + '</span>' : '') + '</div>';
-  let arr = L.filter(x => cfiltro === 'p' ? !x.feito : cfiltro === 'f' ? x.feito : true);
+function filhos(id){ return (D.checklist || []).filter(x => x.pai === id).map((x,i) => ({ x, i })).sort((a,b) => (a.x.ordem||1e9) - (b.x.ordem||1e9) || a.i - b.i).map(o => o.x); }
+function principais(){ const ids = new Set((D.checklist||[]).map(x => x.id)); return (D.checklist || []).filter(x => !x.pai || !ids.has(x.pai)); }
+function feitoDe(x){ const f = filhos(x.id); return f.length ? f.every(s => s.feito) : !!x.feito; }
+function ordenarGrupo(arr){ return arr.map((x,i) => ({ x, i })).sort((a,b) => (a.x.ordem||1e9) - (b.x.ordem||1e9) || (a.x.prazo||'9999').localeCompare(b.x.prazo||'9999') || a.i - b.i).map(o => o.x); }
+function catsCheck(L){
   const cats = Array.from(new Set(L.map(x => x.categoria || 'Outros')));
   const etapa = c => /^\d+\./.test(c) ? 0 : 1;
-  cats.sort((a,b) => etapa(a) - etapa(b) || ((ORDEM_CAT.indexOf(a)+1)||99) - ((ORDEM_CAT.indexOf(b)+1)||99) || a.localeCompare(b, 'pt-BR', { numeric: true }));
+  return cats.sort((a,b) => etapa(a) - etapa(b) || ((ORDEM_CAT.indexOf(a)+1)||99) - ((ORDEM_CAT.indexOf(b)+1)||99) || a.localeCompare(b, 'pt-BR', { numeric: true }));
+}
+function renderCheck(){
+  const P = principais(), feitas = P.filter(feitoDe).length, pct = P.length ? Math.round(feitas / P.length * 100) : 0;
+  const subs = (D.checklist||[]).filter(x => x.pai), subsOk = subs.filter(x => x.feito).length;
+  const dias = Math.round((new Date(DATA_FESTA + 'T12:00:00') - new Date(hojeISO() + 'T12:00:00')) / 864e5);
+  const prox = P.filter(x => !feitoDe(x) && x.prazo).sort((a,b) => a.prazo.localeCompare(b.prazo))[0];
+  const hoje = hojeISO(), atras = P.filter(x => !feitoDe(x) && x.prazo && x.prazo < hoje).length;
+  $('#cprog').innerHTML = '<div class="t"><span>🎂 ' + (dias > 0 ? 'Faltam <b>' + dias + '</b> dias' : dias === 0 ? '<b>É hoje!</b>' : 'Festa realizada') + ' · 23/03/2027</span><span>' + pct + '%</span></div>' +
+    '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="t" style="margin:8px 0 0;font-size:13px;color:var(--ink-soft)"><span><b>' + feitas + '</b> de ' + P.length + ' tarefas' + (subs.length ? ' · ' + subsOk + '/' + subs.length + ' subitens' : '') +
+    (atras ? ' · <span class="late">' + atras + ' atrasada' + (atras>1?'s':'') + '</span>' : '') + '</span>' + (prox ? '<span>Próximo: ' + dataBR(prox.prazo) + '</span>' : '') + '</div>';
+  $('#ord-check').setAttribute('aria-pressed', ordenando); $('#ord-check').textContent = ordenando ? '✓ Pronto' : '↕ Ordenar';
+  const cats = catsCheck(P);
   $('#ccats').innerHTML = Array.from(new Set(cats.length ? cats : ORDEM_CAT)).map(c => '<option value="' + esc(c) + '">').join('');
-  const hoje = hojeISO();
+  const passa = x => cfiltro === 'p' ? !feitoDe(x) : cfiltro === 'f' ? feitoDe(x) : true;
+  const setas = (id) => ordenando ? '<span class="arr"><button data-mv="-1" data-id="' + esc(id) + '" aria-label="Subir">↑</button><button data-mv="1" data-id="' + esc(id) + '" aria-label="Descer">↓</button></span>' : '';
   $('#clist').innerHTML = cats.map(cat => {
-    const it = arr.filter(x => (x.categoria || 'Outros') === cat).map((x,i) => ({ x, i })).sort((a,b) => (a.x.prazo||'9999').localeCompare(b.x.prazo||'9999') || a.i - b.i).map(o => o.x); if (!it.length) return '';
-    const tot = L.filter(x => (x.categoria||'Outros') === cat), ok = tot.filter(x => x.feito).length;
-    return '<div class="sec-h">' + esc(cat) + ' · ' + ok + '/' + tot.length + '</div><div class="list">' + it.map(x => {
-      const late = !x.feito && x.prazo && x.prazo < hoje;
+    const grupo = ordenarGrupo(P.filter(x => (x.categoria || 'Outros') === cat));
+    const it = grupo.filter(passa); if (!it.length) return '';
+    const ok = grupo.filter(feitoDe).length;
+    return '<div class="sec-h">' + esc(cat) + ' · ' + ok + '/' + grupo.length + '</div><div class="list">' + it.map(x => {
+      const f = filhos(x.id), fd = feitoDe(x), fOk = f.filter(s => s.feito).length;
+      const late = !fd && x.prazo && x.prazo < hoje, aberto = !fechados.has(x.id);
       const meta = [x.prazo ? '<span class="' + (late ? 'late' : '') + '">📅 ' + dataBR(x.prazo) + (late ? ' · atrasada' : '') + '</span>' : '', x.resp ? '👤 ' + esc(x.resp) : '', x.obs ? esc(x.obs) : ''].filter(Boolean).join(' · ');
-      return '<div class="citem' + (x.feito ? ' done' : '') + '" data-id="' + esc(x.id) + '"><input type="checkbox" ' + (x.feito ? 'checked' : '') + ' aria-label="Feito">' +
-        '<div class="tx"><div>' + esc(x.tarefa) + '</div>' + (meta ? '<div class="m">' + meta + '</div>' : '') + '</div></div>';
+      return '<div class="citem' + (fd ? ' done' : '') + '" data-id="' + esc(x.id) + '"><input type="checkbox" ' + (fd ? 'checked' : '') + ' aria-label="Feito">' +
+        '<div class="tx"><div>' + esc(x.tarefa) + '</div>' + (meta ? '<div class="m">' + meta + '</div>' : '') + '</div>' +
+        (f.length ? '<button class="subtg" data-tg="' + esc(x.id) + '" aria-expanded="' + aberto + '">' + fOk + '/' + f.length + ' ' + (aberto ? '▾' : '▸') + '</button>' : '') + setas(x.id) + '</div>' +
+        (f.length && aberto ? '<div class="subs">' + f.map(s => '<div class="citem sub' + (s.feito ? ' done' : '') + '" data-id="' + esc(s.id) + '"><input type="checkbox" ' + (s.feito ? 'checked' : '') + ' aria-label="Feito">' +
+          '<div class="tx"><div>' + esc(s.tarefa) + '</div></div>' + setas(s.id) + '</div>').join('') + '</div>' : '');
     }).join('') + '</div>';
-  }).join('') || '<div class="empty">' + (L.length ? 'Nada aqui.' : 'Nenhuma tarefa ainda. Toque em “+ Tarefa”.') + '</div>';
+  }).join('') || '<div class="empty">' + (P.length ? 'Nada aqui.' : 'Nenhuma tarefa ainda. Toque em “+ Tarefa”.') + '</div>';
 }
 $('#cchips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; cfiltro = b.dataset.cf;
   document.querySelectorAll('#cchips .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); renderCheck(); });
+$('#ord-check').addEventListener('click', () => { ordenando = !ordenando; renderCheck(); if (ordenando) toast('Use ↑ ↓ para mudar a ordem'); });
+
+// marcar: tarefa com subitens marca/desmarca todos; subitem atualiza a tarefa
+function salvarTarefa(x){ salvarRapido('salvarItem', { tabela: 'checklist', item: x }); }
+function marcar(x, v){
+  const f = filhos(x.id);
+  if (f.length) { f.forEach(s => { if (s.feito !== v) { s.feito = v; salvarTarefa(s); } }); }
+  if (x.feito !== v) { x.feito = v; salvarTarefa(x); }
+  if (x.pai) { const p = D.checklist.find(i => i.id === x.pai); if (p) { const pv = filhos(p.id).every(s => s.feito); if (p.feito !== pv) { p.feito = pv; salvarTarefa(p); } } }
+}
+// mover para cima/baixo entre os irmãos (mesma etapa, ou mesma tarefa no caso de subitem)
+function mover(id, d){
+  const x = D.checklist.find(i => i.id === id); if (!x) return;
+  const irmaos = x.pai && D.checklist.some(i => i.id === x.pai) ? filhos(x.pai) : ordenarGrupo(principais().filter(i => (i.categoria||'Outros') === (x.categoria||'Outros')));
+  const k = irmaos.findIndex(i => i.id === id), n = k + d;
+  if (n < 0 || n >= irmaos.length) return;
+  [irmaos[k], irmaos[n]] = [irmaos[n], irmaos[k]];
+  const ordem = {}; irmaos.forEach((i, j) => { i.ordem = (j + 1) * 10; ordem[i.id] = i.ordem; });
+  renderCheck(); salvarRapido('ordenar', { tabela: 'checklist', ordem });
+}
 $('#clist').addEventListener('click', e => {
+  const mv = e.target.closest('[data-mv]'); if (mv) return mover(mv.dataset.id, +mv.dataset.mv);
+  const tg = e.target.closest('[data-tg]');
+  if (tg) { const id = tg.dataset.tg; fechados.has(id) ? fechados.delete(id) : fechados.add(id); ls.set('checkFechados', JSON.stringify([...fechados])); return renderCheck(); }
   const row = e.target.closest('.citem'); if (!row) return;
   const x = D.checklist.find(i => i.id === row.dataset.id); if (!x) return;
-  if (e.target.matches('input[type=checkbox]')) { x.feito = e.target.checked; renderCheck(); salvarRapido('salvarItem', { tabela: 'checklist', item: x }); }
-  else if (e.target.closest('.tx')) abrirItem(x);
+  if (e.target.matches('input[type=checkbox]')) { marcar(x, e.target.checked); renderCheck(); }
+  else if (e.target.closest('.tx')) abrirItem(x.pai ? (D.checklist.find(i => i.id === x.pai) || x) : x);
 });
+
+// ---- janela da tarefa, com a lista de subitens ----
 function abrirItem(x){
   itemEd = x || null;
   $('#cf-t').textContent = x ? 'Editar tarefa' : 'Nova tarefa';
   $('#cf-tarefa').value = x ? x.tarefa : ''; $('#cf-cat').value = x ? x.categoria : '';
   $('#cf-prazo').value = x ? x.prazo : ''; $('#cf-resp').value = x ? x.resp : ''; $('#cf-obs').value = x ? x.obs : '';
+  subsEd = x ? filhos(x.id).map(s => ({ id: s.id, tarefa: s.tarefa, feito: s.feito })) : [];
   $('#cf-feito').checked = !!(x && x.feito); $('#cf-del').classList.toggle('hidden', !x);
-  $('#cmodal').classList.remove('hidden'); setTimeout(() => $('#cf-tarefa').focus(), 50);
+  $('#cf-novo-sub').value = ''; renderSubsEd();
+  $('#cmodal').classList.remove('hidden'); $('#cf').scrollTop = 0; if (!x) setTimeout(() => $('#cf-tarefa').focus(), 50);
 }
+function renderSubsEd(){
+  $('#cf-subs').innerHTML = subsEd.map((s, i) => '<div class="subed" data-i="' + i + '"><input type="checkbox" ' + (s.feito ? 'checked' : '') + ' aria-label="Feito">' +
+    '<input type="text" value="' + esc(s.tarefa) + '" maxlength="200">' +
+    '<button type="button" data-s="-1" aria-label="Subir">↑</button><button type="button" data-s="1" aria-label="Descer">↓</button><button type="button" data-s="x" aria-label="Remover">✕</button></div>').join('');
+  $('#cf-feito-wrap').classList.toggle('hidden', subsEd.length > 0);
+}
+function lerSubsEd(){ document.querySelectorAll('#cf-subs .subed').forEach(r => { const s = subsEd[+r.dataset.i]; s.tarefa = r.querySelector('input[type=text]').value; s.feito = r.querySelector('input[type=checkbox]').checked; }); }
+function addSub(){ const v = $('#cf-novo-sub').value.trim(); if (!v) return; lerSubsEd(); subsEd.push({ id: '', tarefa: v, feito: false }); $('#cf-novo-sub').value = ''; renderSubsEd(); $('#cf-novo-sub').focus(); }
+$('#cf-add-sub').addEventListener('click', addSub);
+$('#cf-novo-sub').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } });
+$('#cf-subs').addEventListener('click', e => {
+  const b = e.target.closest('[data-s]'); if (!b) return; lerSubsEd();
+  const i = +b.closest('.subed').dataset.i, a = b.dataset.s;
+  if (a === 'x') subsEd.splice(i, 1);
+  else { const n = i + +a; if (n >= 0 && n < subsEd.length) [subsEd[i], subsEd[n]] = [subsEd[n], subsEd[i]]; }
+  renderSubsEd();
+});
 $('#cf-x').addEventListener('click', () => $('#cmodal').classList.add('hidden'));
 $('#cmodal').addEventListener('click', e => { if (e.target.id === 'cmodal') $('#cmodal').classList.add('hidden'); });
 $('#cf').addEventListener('submit', e => {
   e.preventDefault(); const tarefa = $('#cf-tarefa').value.trim(); if (!tarefa) return;
-  const item = { id: itemEd ? itemEd.id : '', tarefa, categoria: $('#cf-cat').value.trim(), prazo: $('#cf-prazo').value, resp: $('#cf-resp').value.trim(), obs: $('#cf-obs').value.trim(), feito: $('#cf-feito').checked };
-  if (!item.id) item.id = novoId('C');
-  $('#cmodal').classList.add('hidden'); upsert(D.checklist, item); render();
-  salvarRapido('salvarItem', { tabela: 'checklist', item }, itemEd ? 'Tarefa salva' : 'Tarefa adicionada');
+  lerSubsEd(); if ($('#cf-novo-sub').value.trim()) addSub();
+  const categoria = $('#cf-cat').value.trim() || 'Outros';
+  const item = Object.assign({}, itemEd || {}, { id: itemEd ? itemEd.id : novoId('C'), tarefa, categoria, prazo: $('#cf-prazo').value, resp: $('#cf-resp').value.trim(), obs: $('#cf-obs').value.trim() });
+  if (!itemEd) { const g = principais().filter(i => (i.categoria||'Outros') === categoria); const mx = Math.max(0, ...g.map(i => i.ordem || 0)); item.ordem = mx ? mx + 10 : 0; item.pai = ''; }
+  else if (itemEd.categoria !== categoria) item.ordem = 0;   // mudou de etapa: entra pela data
+  // subitens: cria, atualiza e apaga só o que mudou
+  const antes = itemEd ? filhos(itemEd.id) : [];
+  const vivos = subsEd.filter(s => s.tarefa.trim());
+  item.feito = vivos.length ? vivos.every(s => s.feito) : $('#cf-feito').checked;
+  $('#cmodal').classList.add('hidden');
+  upsert(D.checklist, item); salvarTarefa(item);
+  vivos.forEach((s, j) => {
+    const ex = s.id && antes.find(a => a.id === s.id);
+    const novo = { id: s.id || novoId('C'), tarefa: s.tarefa.trim(), categoria, feito: !!s.feito, prazo: '', resp: '', obs: '', pai: item.id, ordem: (j + 1) * 10 };
+    if (!ex || ex.tarefa !== novo.tarefa || ex.feito !== novo.feito || ex.ordem !== novo.ordem || ex.categoria !== categoria) { upsert(D.checklist, Object.assign({}, ex || {}, novo)); salvarTarefa(Object.assign({}, ex || {}, novo)); }
+  });
+  antes.filter(a => !vivos.some(s => s.id === a.id)).forEach(a => { D.checklist = D.checklist.filter(i => i.id !== a.id); salvarRapido('removerItem', { tabela: 'checklist', id: a.id }); });
+  render(); toast(itemEd ? 'Tarefa salva' : 'Tarefa adicionada');
 });
-$('#cf-del').addEventListener('click', () => { if (!itemEd || !confirm('Excluir a tarefa “' + itemEd.tarefa + '”?')) return;
-  const id = itemEd.id; $('#cmodal').classList.add('hidden'); D.checklist = D.checklist.filter(x => x.id !== id); render();
+$('#cf-del').addEventListener('click', () => {
+  if (!itemEd) return; const n = filhos(itemEd.id).length;
+  if (!confirm('Excluir a tarefa “' + itemEd.tarefa + '”' + (n ? ' e os ' + n + ' subitens' : '') + '?')) return;
+  const id = itemEd.id; $('#cmodal').classList.add('hidden'); D.checklist = D.checklist.filter(x => x.id !== id && x.pai !== id); render();
   salvarRapido('removerItem', { tabela: 'checklist', id }, 'Tarefa excluída'); });
 
 /* ---------- checklist sugerido (importar) ---------- */
@@ -993,11 +1086,11 @@ $('#imp-check').addEventListener('click', async () => {
   const porTexto = new Map(L.map(x => [norm(x.tarefa), x]));
   const nTextos = new Set(N.map(x => norm(x.tarefa)));
   const add = [], upd = [];
-  N.forEach(n => { const ex = porTexto.get(norm(n.tarefa));
+  N.forEach(n => { const ex = L.find(x => !x.pai && norm(x.tarefa) === norm(n.tarefa));
     if (!ex) add.push(n);
     else if (ex.categoria !== n.categoria || ex.prazo !== n.prazo) upd.push(Object.assign({}, ex, { categoria: n.categoria, prazo: n.prazo })); });
   // tarefas antigas sugeridas (lista inicial ou etapas antigas) que não foram feitas e não estão no cronograma novo
-  const rem = L.filter(x => !x.feito && !nTextos.has(norm(x.tarefa)) && (/^C\d{3}$/.test(x.id) || /^\d+\.\s/.test(x.categoria)));
+  const rem = L.filter(x => !x.feito && !x.pai && !L.some(s => s.pai === x.id) && !nTextos.has(norm(x.tarefa)) && (/^C\d{3}$/.test(x.id) || /^\d+\.\s/.test(x.categoria)));
   if (!add.length && !upd.length && !rem.length) return toast('O cronograma já está atualizado');
   if (!confirm('Cronograma até a festa (23/03/2027):\n\n• ' + add.length + ' tarefas novas\n• ' + upd.length + ' tarefas com prazo/etapa atualizados\n• ' + rem.length + ' tarefas sugeridas antigas removidas (só as não feitas)\n\nTarefas que você criou ou já marcou como feitas ficam. Leva uns 2 minutos — deixe a página aberta.')) return;
   importando = true; const btn = $('#imp-check'); const tot = add.length + upd.length + rem.length; let n = 0;
