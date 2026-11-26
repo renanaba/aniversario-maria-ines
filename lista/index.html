@@ -378,6 +378,29 @@ async function carregar(acao, extra, msg){
   } finally { $('#app').classList.remove('busy'); }
 }
 
+/* salvamento rápido em segundo plano: a tela não trava, os toques entram numa fila */
+const fila = []; let enviando = false;
+function salvarRapido(acao, extra){
+  fila.push({ acao, extra: JSON.parse(JSON.stringify(extra)) });
+  if (!enviando) processarFila();
+}
+async function processarFila(){
+  enviando = true; $('#sync').textContent = 'Salvando… (' + fila.length + ')';
+  let ultimo = null;
+  while (fila.length) {
+    const t = fila.shift();
+    try { ultimo = await api(t.acao, t.extra); }
+    catch (e) {
+      if (e.code === 'senha') { enviando = false; fila.length = 0; return sair('Senha incorreta.'); }
+      toast('Não consegui salvar uma alteração. Recarregando…'); fila.length = 0; enviando = false; return carregar('listar');
+    }
+    $('#sync').textContent = fila.length ? 'Salvando… (' + fila.length + ')' : 'Salvando…';
+  }
+  enviando = false;
+  if (ultimo) { D = ultimo; normD(); render(); $('#sync').textContent = '✓ Salvo · ' + (ultimo.atualizado || ''); }
+}
+window.addEventListener('beforeunload', e => { if (enviando || fila.length) { e.preventDefault(); e.returnValue = ''; } });
+
 function sair(m){
   try { sessionStorage.removeItem('senhaLista'); } catch(_){}
   senha=''; $('#app').classList.add('hidden'); $('#add').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lerr').textContent = m || '';
@@ -516,14 +539,14 @@ $('#list').addEventListener('click', e => {
   const p = e.target.closest('[data-p]'), a = e.target.closest('[data-act]');
   if (p && p.dataset.p !== c.presenca) {
     c.presenca = p.dataset.p; render();
-    carregar('salvar', { convidado: c });
+    salvarRapido('salvar', { convidado: c });
   } else if (a && a.dataset.act === 'mover') {
     const novo = Object.assign({}, c, { lista: c.lista==='Espera' ? 'Convidados' : 'Espera' });
     carregar('salvar', { convidado: novo }, novo.lista==='Espera' ? c.nome + ' foi para a lista de espera' : c.nome + ' entrou na lista');
   } else if (a && a.dataset.act === 'editar') abrir(c);
   else if (a && a.dataset.act === 'gift') {
     c.lembranca = !c.lembranca; render();
-    carregar('salvar', { convidado: c }, c.lembranca ? '🎁 ' + c.nome + ' recebe lembrança' : c.nome + ' sem lembrança');
+    salvarRapido('salvar', { convidado: c });
   }
 });
 
@@ -786,7 +809,7 @@ $('#cchips').addEventListener('click', e => { const b = e.target.closest('.chip'
 $('#clist').addEventListener('click', e => {
   const row = e.target.closest('.citem'); if (!row) return;
   const x = D.checklist.find(i => i.id === row.dataset.id); if (!x) return;
-  if (e.target.matches('input[type=checkbox]')) { x.feito = e.target.checked; renderCheck(); carregar('salvarItem', { tabela: 'checklist', item: x }); }
+  if (e.target.matches('input[type=checkbox]')) { x.feito = e.target.checked; renderCheck(); salvarRapido('salvarItem', { tabela: 'checklist', item: x }); }
   else if (e.target.closest('.tx')) abrirItem(x);
 });
 function abrirItem(x){
@@ -959,7 +982,7 @@ $('#gf').addEventListener('submit', e => {
 $('#gf-del').addEventListener('click', () => { if (!gastoEd || !confirm('Excluir o gasto “' + gastoEd.descricao + '”?')) return;
   $('#gmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'gastos', id: gastoEd.id }, 'Gasto excluído'); });
 
-document.addEventListener('visibilitychange', () => { if (!document.hidden && senha && !$('#app').classList.contains('hidden')) carregar('listar'); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !enviando && senha && !$('#app').classList.contains('hidden')) carregar('listar'); });
 
 if (senha) api('listar').then(j => { D = j; entrar(); }).catch(e => sair(e.code==='senha' ? 'Senha incorreta.' : ''));
 </script>
