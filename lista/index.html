@@ -243,6 +243,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 
   <div id="sec-check" class="hidden">
     <div class="prog" id="cprog"></div>
+    <div class="tools"><button class="ghost" id="imp-check">📋 Importar checklist sugerido</button></div>
     <div class="chips" id="cchips">
       <button class="chip" data-cf="" aria-pressed="true">Todas</button>
       <button class="chip" data-cf="p" aria-pressed="false">A fazer</button>
@@ -759,8 +760,9 @@ function renderCheck(){
   $('#cprog').innerHTML = '<div class="t"><span><b>' + feitas + '</b> de ' + L.length + ' feitas</span><span>' + pct + '%</span></div><div class="bar"><i style="width:' + pct + '%"></i></div>';
   let arr = L.filter(x => cfiltro === 'p' ? !x.feito : cfiltro === 'f' ? x.feito : true);
   const cats = Array.from(new Set(L.map(x => x.categoria || 'Outros')));
-  cats.sort((a,b) => ((ORDEM_CAT.indexOf(a)+1)||99) - ((ORDEM_CAT.indexOf(b)+1)||99) || a.localeCompare(b));
-  $('#ccats').innerHTML = Array.from(new Set(ORDEM_CAT.concat(cats))).map(c => '<option value="' + esc(c) + '">').join('');
+  const etapa = c => /^\d+\./.test(c) ? 0 : 1;
+  cats.sort((a,b) => etapa(a) - etapa(b) || ((ORDEM_CAT.indexOf(a)+1)||99) - ((ORDEM_CAT.indexOf(b)+1)||99) || a.localeCompare(b, 'pt-BR', { numeric: true }));
+  $('#ccats').innerHTML = Array.from(new Set(cats.length ? cats : ORDEM_CAT)).map(c => '<option value="' + esc(c) + '">').join('');
   const hoje = hojeISO();
   $('#clist').innerHTML = cats.map(cat => {
     const it = arr.filter(x => (x.categoria || 'Outros') === cat); if (!it.length) return '';
@@ -798,6 +800,91 @@ $('#cf').addEventListener('submit', e => {
 });
 $('#cf-del').addEventListener('click', () => { if (!itemEd || !confirm('Excluir a tarefa “' + itemEd.tarefa + '”?')) return;
   $('#cmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'checklist', id: itemEd.id }, 'Tarefa excluída'); });
+
+/* ---------- checklist sugerido (importar) ---------- */
+const CHECK_SUGERIDO = [
+  ['1. Planejamento (4 semanas antes)', [
+    'Confirmar com o espaço: horário de montagem, de término e o que pode levar',
+    'Definir o cardápio e as quantidades pelo número de confirmados',
+    'Definir o tema e as cores da decoração',
+    'Escolher a lembrança das mulheres e conferir quantas são (🎁 no app)',
+    'Revisar a lista, os nomes das famílias e as lembranças no app']],
+  ['2. Convites (3 a 4 semanas antes)', [
+    'Enviar o convite de cada família pelo WhatsApp',
+    'Enviar o link geral para quem não está em família',
+    'Cobrar quem ainda não respondeu (1 semana depois do convite)']],
+  ['3. Encomendas (3 semanas antes)', [
+    'Pedir orçamentos e fechar os salgados (com sinal)',
+    'Fechar o bolo: sabor, tamanho e decoração',
+    'Fechar os docinhos',
+    'Encomendar ou comprar as lembranças',
+    'Lançar no Financeiro os sinais pagos e o que falta pagar']],
+  ['4. Decoração (2 a 3 semanas antes)', [
+    'Painel ou fundo da mesa do bolo',
+    'Toalha e itens da mesa do bolo: bandejas, suportes, boleira',
+    'Balões: comprar e combinar quem enche',
+    'Vela de número 1 e topo de bolo',
+    'Enfeites para as mesas dos convidados (se for usar)']],
+  ['5. Servir a comida (2 semanas antes)', [
+    'Pratinhos, copos, guardanapos e garfinhos',
+    'Forminhas para os docinhos',
+    'Bandejas e travessas para salgados e doces',
+    'Como manter os salgados quentes (ou combinar entrega em duas levas)',
+    'Faca e espátula para o bolo',
+    'Isopor ou caixas térmicas para as bebidas',
+    'Sacos de lixo e papel-toalha']],
+  ['6. Bebidas (1 semana antes)', [
+    'Comprar refrigerante, suco e água',
+    'Combinar onde e a que horas comprar o gelo']],
+  ['7. Última semana', [
+    'Fechar o número final e ajustar as encomendas',
+    'Embalar e etiquetar as lembranças',
+    'Escala de ajudantes: cozinha e reposição, recepção, crianças',
+    'Roupa da Maria Inês e uma muda reserva',
+    'Quem vai tirar as fotos',
+    'Som e playlist',
+    'Confirmar horários de entrega e retirada de tudo']],
+  ['8. Véspera', [
+    'Buscar os docinhos e o que faltar da decoração',
+    'Separar em caixas tudo que vai para o espaço',
+    'Carregar celular, câmera e caixa de som',
+    'Kit da Maria Inês: fralda, roupa, lenços, remédios de costume']],
+  ['9. Dia da festa', [
+    'Buscar salgados e bolo no horário combinado',
+    'Comprar o gelo',
+    'Montar a mesa do bolo e a decoração',
+    'Organizar a mesa da comida e as bebidas',
+    'Montar o cantinho das lembranças',
+    'Momento de oração e parabéns',
+    'Entregar as lembranças na saída']],
+  ['10. Depois', [
+    'Recolher a decoração e o que for seu',
+    'Pagar o que ficou pendente e lançar no Financeiro',
+    'Agradecer no grupo e mandar as fotos']]
+];
+let importando = false;
+$('#imp-check').addEventListener('click', async () => {
+  if (importando) return;
+  const novos = [];
+  CHECK_SUGERIDO.forEach(([cat, it]) => it.forEach(t => novos.push({ tarefa: t, categoria: cat })));
+  const ja = new Set((D.checklist||[]).map(x => norm(x.tarefa)));
+  const add = novos.filter(x => !ja.has(norm(x.tarefa)));
+  const velhas = (D.checklist||[]).filter(x => /^C\d{3}$/.test(x.id) && !x.feito);
+  if (!add.length && !velhas.length) return toast('O checklist sugerido já está aqui');
+  if (!confirm('Vou adicionar ' + add.length + ' tarefas em ' + CHECK_SUGERIDO.length + ' etapas' +
+      (velhas.length ? ' e apagar as ' + velhas.length + ' tarefas da lista inicial que ainda não foram feitas' : '') +
+      '.\n\nTarefas que você criou ou já marcou como feitas ficam.\n\nLeva uns 2 minutos — deixe a página aberta.')) return;
+  importando = true; const btn = $('#imp-check'); const tot = add.length + velhas.length; let n = 0;
+  try {
+    for (const x of velhas) { btn.textContent = 'Importando… ' + (++n) + '/' + tot; D = await api('removerItem', { tabela: 'checklist', id: x.id }); }
+    for (const x of add) { btn.textContent = 'Importando… ' + (++n) + '/' + tot; D = await api('salvarItem', { tabela: 'checklist', item: Object.assign({ prazo: '', resp: '', obs: '', feito: false }, x) }); }
+    normD(); render(); toast('Checklist importado');
+  } catch (e) {
+    normD(); render();
+    if (e.code === 'acao' || e.code === 'tabela') alert('O script da planilha ainda é a versão antiga. Atualize o Code.gs no Apps Script (Nova versão) e tente de novo.');
+    else toast('Parou em ' + n + '/' + tot + '. Toque de novo para continuar.');
+  } finally { importando = false; btn.textContent = '📋 Importar checklist sugerido'; }
+});
 
 /* ---------- financeiro ---------- */
 const CATS_G = ['Comida','Bolo e doces','Bebidas','Decoração','Lembranças','Descartáveis','Local e aluguel','Roupa','Outros'];
