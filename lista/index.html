@@ -131,6 +131,54 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .pick input{width:auto}
 .pick small{color:var(--ink-soft);margin-left:auto;font-size:11px;text-align:right}
 .tag.f{background:var(--field);color:var(--ink-soft)}
+.secs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px}
+.secs button{border:0;background:none;border-radius:10px;padding:9px 4px;font-weight:600;font-size:14px;color:var(--ink-soft)}
+.secs button[aria-pressed=true]{background:var(--rose);color:#fff}
+.gift{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.gift .ico{font-size:26px}
+.gift .txt{flex:1;min-width:180px;font-size:14px}
+.gift .txt b.big{font-size:22px;color:var(--rose-deep)}
+.gift .txt small{display:block;color:var(--ink-soft);font-size:12px}
+.giftbtn{background:var(--rose-soft);border:1px solid #EBC3D2;color:var(--rose-deep);border-radius:10px;padding:7px 12px;font-size:13px;font-weight:600}
+.gb{background:none;border:1px solid var(--line);border-radius:8px;padding:1px 6px;font-size:13px;filter:grayscale(1);opacity:.45}
+.gb[aria-pressed=true]{filter:none;opacity:1;background:var(--rose-soft);border-color:#EBC3D2}
+.lgrp{padding:8px 10px 2px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);background:var(--field)}
+.pick label.duv{background:#FFF8E6}
+.pick label .q{font-size:11px;color:var(--wait);font-weight:600;margin-left:4px}
+.sugrow{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;padding:9px 10px;border-top:1px solid var(--line)}
+.sugrow:first-child{border-top:0}
+.sugrow .old{grid-column:2;font-size:12px;color:var(--ink-soft)}
+.sugrow input[type=text]{grid-column:2;padding:7px 9px;font-size:14px}
+.sugrow input[type=checkbox]{width:auto;grid-row:span 2}
+/* checklist */
+.prog{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.prog .t{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px}
+.bar{height:8px;border-radius:6px;background:var(--field);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:6px}
+.bar.rose i{background:var(--rose)} .bar.over i{background:#B3261E}
+.citem{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-top:1px solid var(--line)}
+.citem input{width:20px;height:20px;margin-top:2px;flex:0 0 auto;accent-color:var(--ok)}
+.citem .tx{flex:1;min-width:0;cursor:pointer}
+.citem .tx .m{font-size:12px;color:var(--ink-soft)}
+.citem.done .tx>div:first-child{text-decoration:line-through;color:var(--ink-soft)}
+.citem .late{color:#B3261E;font-weight:600}
+/* financeiro */
+.fin{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:640px){.fin{grid-template-columns:repeat(4,1fr)}}
+.fin .stat .n{font-size:22px}
+.fin .stat.edit{cursor:pointer}
+.fin .stat.edit .l::after{content:" ✎"}
+.neg .n{color:#B3261E!important}
+.cat{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px}
+.cat:first-child{border-top:0}
+.cat .bar{grid-column:1/-1;height:6px}
+.gasto{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid var(--line);cursor:pointer}
+.gasto:first-child{border-top:0}
+.gasto .d{font-size:12px;color:var(--ink-soft)}
+.gasto .v{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.gasto .v small{display:block;font-weight:500;font-size:11px}
+.gasto .v small.ap{color:var(--wait)} .gasto .v small.pg{color:var(--ok)}
+.sec-h{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:18px 2px 8px}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:20}
 .busy{opacity:.55;pointer-events:none}
 </style>
@@ -148,15 +196,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 
 <main id="app" class="hidden">
   <div class="top">
-    <div><h1>Convidados</h1><div class="sync" id="sync"></div></div>
+    <div><h1 id="titulo-sec">Convidados</h1><div class="sync" id="sync"></div></div>
     <div class="acts">
       <button class="ghost" id="convite">Copiar convite</button>
       <button class="ghost" id="atualizar" aria-label="Atualizar">↻</button>
     </div>
   </div>
 
+  <nav class="secs">
+    <button data-sec="conv" aria-pressed="true">👥 Convidados</button>
+    <button data-sec="check" aria-pressed="false">✅ Checklist</button>
+    <button data-sec="fin" aria-pressed="false">💰 Financeiro</button>
+  </nav>
+
+  <div id="sec-conv">
   <div class="stats" id="stats"></div>
   <div class="extra" id="extra"></div>
+  <div class="gift" id="gift"></div>
 
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="Convidados" aria-selected="true">Lista<span class="c" id="c-conv"></span></button>
@@ -173,14 +229,35 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
       <button class="chip" data-f="Confirmado" aria-pressed="false">Confirmados</button>
       <button class="chip" data-f="Não vai" aria-pressed="false">Não vão</button>
       <button class="chip" data-f="Criança" aria-pressed="false">Crianças</button>
+      <button class="chip" data-f="🎁" aria-pressed="false">🎁 Lembrança</button>
     </div>
     <div class="list" id="list"></div>
   </div>
   <div id="pane-resp" class="hidden"><div class="list" id="resps"></div></div>
   <div id="pane-fam" class="hidden">
-    <div class="tools"><button class="ghost" id="nova-fam">+ Nova família</button></div>
+    <div class="tools"><button class="ghost" id="nova-fam">+ Nova família</button><button class="ghost" id="sug-fam">✨ Sugerir nomes</button></div>
     <div class="famhint" id="famhint"></div>
     <div class="list" id="fams"></div>
+  </div>
+  </div>
+
+  <div id="sec-check" class="hidden">
+    <div class="prog" id="cprog"></div>
+    <div class="chips" id="cchips">
+      <button class="chip" data-cf="" aria-pressed="true">Todas</button>
+      <button class="chip" data-cf="p" aria-pressed="false">A fazer</button>
+      <button class="chip" data-cf="f" aria-pressed="false">Feitas</button>
+    </div>
+    <div id="clist"></div>
+  </div>
+
+  <div id="sec-fin" class="hidden">
+    <div class="fin" id="fcards"></div>
+    <div class="prog" style="margin-top:10px" id="fprog"></div>
+    <div class="sec-h">Por categoria</div>
+    <div class="list" id="fcats"></div>
+    <div class="sec-h">Gastos</div>
+    <div class="list" id="flist"></div>
   </div>
 </main>
 </div>
@@ -200,6 +277,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <label for="ef-fam">Família</label>
     <select id="ef-fam"></select>
     <label for="ef-obs">Observação</label><input id="ef-obs" maxlength="200">
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ef-gift" style="width:auto"> 🎁 Recebe lembrança</label>
     <div class="btns"><button type="button" class="btn-d hidden" id="ef-del">Remover</button><button type="button" class="btn-s" id="ef-x">Cancelar</button><button type="submit" class="btn-p" id="ef-ok">Salvar</button></div>
   </form>
 </div>
@@ -216,6 +294,54 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
   </form>
 </div>
 
+<div class="modal hidden" id="lmodal" role="dialog" aria-modal="true">
+  <form class="sheet" id="lf">
+    <h2>🎁 Quem recebe lembrança</h2>
+    <p style="font-size:13px;color:var(--ink-soft)">Já marquei as mulheres adultas pelo nome. Os nomes em amarelo eu não tive certeza: confira. <b id="lcount"></b></p>
+    <input id="l-busca" type="search" placeholder="Buscar nome…" autocomplete="off" style="margin-top:8px">
+    <div class="pick" id="lpick"></div>
+    <div class="btns"><button type="button" class="btn-s" id="lf-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
+  </form>
+</div>
+
+<div class="modal hidden" id="smodal" role="dialog" aria-modal="true">
+  <form class="sheet" id="sf">
+    <h2>✨ Nomes das famílias</h2>
+    <p style="font-size:13px;color:var(--ink-soft)">Sugestão com os adultos de cada grupo, na ordem em que você cadastrou. É o nome que aparece no convite (“Olá, …!”). Dá para editar antes de aplicar.</p>
+    <div class="pick" id="spick" style="max-height:52vh"></div>
+    <div class="btns"><button type="button" class="btn-s" id="sf-x">Cancelar</button><button type="submit" class="btn-p" id="sf-ok">Aplicar</button></div>
+  </form>
+</div>
+
+<div class="modal hidden" id="cmodal" role="dialog" aria-modal="true">
+  <form class="sheet" id="cf">
+    <h2 id="cf-t">Nova tarefa</h2>
+    <label for="cf-tarefa">Tarefa</label><input id="cf-tarefa" maxlength="200" required>
+    <label for="cf-cat">Categoria</label><input id="cf-cat" list="ccats" maxlength="40" placeholder="Ex.: Comida">
+    <datalist id="ccats"></datalist>
+    <label for="cf-prazo">Prazo <small>(opcional)</small></label><input id="cf-prazo" type="date">
+    <label for="cf-resp">Responsável <small>(opcional)</small></label><input id="cf-resp" maxlength="60">
+    <label for="cf-obs">Observação</label><input id="cf-obs" maxlength="300">
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="cf-feito" style="width:auto"> Feito</label>
+    <div class="btns"><button type="button" class="btn-d hidden" id="cf-del">Excluir</button><button type="button" class="btn-s" id="cf-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
+  </form>
+</div>
+
+<div class="modal hidden" id="gmodal" role="dialog" aria-modal="true">
+  <form class="sheet" id="gf">
+    <h2 id="gf-t">Novo gasto</h2>
+    <label for="gf-desc">Descrição</label><input id="gf-desc" maxlength="200" required placeholder="Ex.: 5 centos de salgado">
+    <label for="gf-valor">Valor (R$)</label><input id="gf-valor" inputmode="decimal" required placeholder="0,00">
+    <label for="gf-cat">Categoria</label><input id="gf-cat" list="gcats" maxlength="40" placeholder="Ex.: Comida">
+    <datalist id="gcats"></datalist>
+    <label for="gf-data">Data</label><input id="gf-data" type="date">
+    <label for="gf-status">Situação</label>
+    <select id="gf-status"><option>Pago</option><option>A pagar</option></select>
+    <label for="gf-obs">Observação <small>(fornecedor, forma de pagamento…)</small></label><input id="gf-obs" maxlength="300">
+    <div class="btns"><button type="button" class="btn-d hidden" id="gf-del">Excluir</button><button type="button" class="btn-s" id="gf-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
+  </form>
+</div>
+
 <script>
 /* ======= CONFIGURAÇÃO ======= */
 const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycby6SFxlqkHumnmbWpCMwo3xmLX6Uj0EUKkVZcRwV-oj4POrdXjIjXz6Mq6dK5Fry_oFcg/exec';
@@ -224,7 +350,8 @@ const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycby6SFxlqkHumnmbWpC
 const $ = s => document.querySelector(s);
 let senha = '';
 try { senha = sessionStorage.getItem('senhaLista') || ''; } catch (_) {}
-let D = { convidados: [], respostas: [], familias: [] };
+let D = { convidados: [], respostas: [], familias: [], checklist: [], gastos: [], config: { orcamento: 2000 } };
+let sec = 'conv';
 let aba = 'Convidados', filtro = '', editando = null;
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -242,7 +369,7 @@ async function carregar(acao, extra, msg){
   $('#app').classList.add('busy');
   try {
     const j = await api(acao || 'listar', extra);
-    D = j; D.familias = D.familias || []; $('#sync').textContent = 'Atualizado ' + (j.atualizado || '');
+    D = j; normD(); $('#sync').textContent = 'Atualizado ' + (j.atualizado || '');
     render(); if (msg) toast(msg);
   } catch (e) {
     if (e.code === 'senha') return sair('Senha incorreta.');
@@ -269,8 +396,9 @@ function famNome(cod){ const f = (D.familias||[]).find(x => x.codigo === cod); r
 const BASE = new URL('../', location.href).href;
 function linkFam(f){ return BASE + '?f=' + f.codigo; }
 function conviteFam(f){ return 'Oi! 🎈 ' + f.nome + ', vocês estão convidados para o aniversário da Maria Inês! Confirmem aqui quem vai, por favor: ' + linkFam(f); }
+function normD(){ D.familias = D.familias || []; D.checklist = D.checklist || []; D.gastos = D.gastos || []; D.config = D.config || { orcamento: 2000 }; }
 function entrar(){
-  D.familias = D.familias || [];
+  normD();
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#add').classList.remove('hidden');
   $('#sync').textContent = 'Atualizado ' + (D.atualizado || ''); render();
 }
@@ -280,7 +408,9 @@ function conta(arr){ return { t: arr.length, a: arr.filter(c=>c.tipo==='Adulto')
 function ac(x){ return x.a + ' adulto' + (x.a===1?'':'s') + ' · ' + x.c + ' criança' + (x.c===1?'':'s'); }
 
 function render(){
+  renderCheck(); renderFin();
   const conv = D.convidados.filter(c => c.lista === 'Convidados');
+  renderGift(conv);
   const esp = D.convidados.filter(c => c.lista === 'Espera');
   const tot = conta(conv), conf = conta(conv.filter(c=>c.presenca==='Confirmado')),
         nao = conta(conv.filter(c=>c.presenca==='Não vai')), pend = conta(conv.filter(c=>c.presenca==='Pendente')), we = conta(esp);
@@ -297,6 +427,7 @@ function render(){
   let arr = D.convidados.filter(c => c.lista === aba);
   if (q) arr = arr.filter(c => norm(c.nome).includes(q));
   if (filtro === 'Criança') arr = arr.filter(c => c.tipo === 'Criança');
+  else if (filtro === '🎁') arr = arr.filter(c => c.lembranca);
   else if (filtro) arr = arr.filter(c => c.presenca === filtro);
   $('#list').innerHTML = arr.length ? arr.map(linha).join('') : '<div class="empty">' + (aba==='Espera' && !q && !filtro ? 'Ninguém na lista de espera ainda. Use “+ Adicionar” e escolha “Lista de espera”.' : 'Nenhum nome encontrado.') + '</div>';
 }
@@ -307,7 +438,7 @@ function linha(c){
   return '<div class="row" data-id="'+esc(c.id)+'"><div class="who"><div class="nm">'+esc(c.nome)+'</div><div class="meta">'+
     '<span class="tag '+(c.tipo==='Criança'?'c':'a')+'">'+c.tipo+'</span>'+(c.idade?'<span>'+esc(c.idade)+'</span>':'')+(c.familia&&famNome(c.familia)?'<span class="tag f">'+esc(famNome(c.familia))+'</span>':'')+(c.obs?'<span>· '+esc(c.obs)+'</span>':'')+'</div></div>'+
     '<div class="pres">'+P.map(p=>'<button data-p="'+p+'" aria-pressed="'+(c.presenca===p)+'" title="'+p+'">'+lbl[p]+'</button>').join('')+'</div>'+
-    '<div class="rowacts"><button class="mini" data-act="mover">'+(c.lista==='Espera'?'Passar p/ lista':'Mover p/ espera')+'</button><button class="mini" data-act="editar">Editar</button></div></div>';
+    '<div class="rowacts">'+(c.tipo==='Adulto'?'<button class="gb" data-act="gift" aria-pressed="'+!!c.lembranca+'" title="Recebe lembrança">🎁</button>':'')+'<button class="mini" data-act="mover">'+(c.lista==='Espera'?'Passar p/ lista':'Mover p/ espera')+'</button><button class="mini" data-act="editar">Editar</button></div></div>';
 }
 
 function renderResp(){
@@ -389,6 +520,10 @@ $('#list').addEventListener('click', e => {
     const novo = Object.assign({}, c, { lista: c.lista==='Espera' ? 'Convidados' : 'Espera' });
     carregar('salvar', { convidado: novo }, novo.lista==='Espera' ? c.nome + ' foi para a lista de espera' : c.nome + ' entrou na lista');
   } else if (a && a.dataset.act === 'editar') abrir(c);
+  else if (a && a.dataset.act === 'gift') {
+    c.lembranca = !c.lembranca; render();
+    carregar('salvar', { convidado: c }, c.lembranca ? '🎁 ' + c.nome + ' recebe lembrança' : c.nome + ' sem lembrança');
+  }
 });
 
 $('#resps').addEventListener('change', e => {
@@ -404,11 +539,12 @@ function abrir(c){
   $('#ef-del').classList.toggle('hidden', !c);
   $('#ef-fam').innerHTML = '<option value="">Nenhuma</option>' + (D.familias||[]).map(f => '<option value="'+esc(f.codigo)+'">'+esc(f.nome)+'</option>').join('');
   $('#ef-fam').value = c && c.familia ? c.familia : '';
+  $('#ef-gift').checked = !!(c && c.lembranca);
   mostrarParecidos();
   $('#modal').classList.remove('hidden'); setTimeout(()=>$('#ef-nome').focus(), 50);
 }
 function fechar(){ $('#modal').classList.add('hidden'); }
-$('#add').addEventListener('click', () => aba === 'Famílias' ? abrirFam(null) : abrir(null));
+$('#add').addEventListener('click', () => sec === 'check' ? abrirItem(null) : sec === 'fin' ? abrirGasto(null) : aba === 'Famílias' ? abrirFam(null) : abrir(null));
 $('#ef-x').addEventListener('click', fechar);
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') fechar(); });
 $('#ef').addEventListener('submit', e => {
@@ -417,7 +553,7 @@ $('#ef').addEventListener('submit', e => {
   if (mudouNome && parecidos(nome, editando ? editando.id : null).length && avisoVisto !== norm(nome)) {
     avisoVisto = norm(nome); $('#ef-ok').textContent = 'Salvar mesmo assim'; $('#ef-sim').scrollIntoView({block:'nearest'}); return;
   }
-  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim(), familia: $('#ef-fam').value };
+  const c = { id: editando ? editando.id : '', nome, idade: $('#ef-idade').value.trim(), lista: $('#ef-lista').value, presenca: $('#ef-pres').value, obs: $('#ef-obs').value.trim(), familia: $('#ef-fam').value, lembranca: $('#ef-gift').checked };
   fechar(); carregar('salvar', { convidado: c }, editando ? 'Salvo' : nome + ' adicionado');
 });
 $('#ef-del').addEventListener('click', () => {
@@ -490,6 +626,234 @@ $('#ff-del').addEventListener('click', () => {
   if (!famEd || !confirm('Excluir a família “' + famEd.nome + '”? As pessoas continuam na lista, só ficam sem família, e o link dela para de funcionar.')) return;
   $('#fmodal').classList.add('hidden'); carregar('removerFamilia', { codigo: famEd.codigo }, 'Família excluída');
 });
+
+/* ---------- seções ---------- */
+document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => {
+  sec = b.dataset.sec;
+  document.querySelectorAll('[data-sec]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  ['conv','check','fin'].forEach(k => $('#sec-' + k).classList.toggle('hidden', k !== sec));
+  $('#titulo-sec').textContent = { conv: 'Convidados', check: 'Checklist', fin: 'Financeiro' }[sec];
+  $('#convite').classList.toggle('hidden', sec !== 'conv');
+  $('#add').textContent = sec === 'check' ? '+ Tarefa' : sec === 'fin' ? '+ Gasto' : '+ Adicionar';
+  window.scrollTo({ top: 0 });
+}));
+
+/* ---------- lembranças ---------- */
+const NOMES_F = 'eliene isabel gabi gaby laura erika polly bia denise ligia angelica sandrinha marleide tania aninha stella stela teresa ines raquel rute ruth beatriz alice ester carmem carmen lais thais iris nicole isabelle gisele cleide irene simone aline jaqueline michele rose ivone socorro conceicao luz elaine solange marlene darlene eliane liliane viviane cristiane rosane edilene jane joice evelyn karen ellen hellen mirian miriam judite lurdes lourdes neide nilde clarisse beth bete lu dani jessiane gorete aparecida cassia milena adriana elisa flaviana mayara stephany sheila cleo salete leninha mariane eliana ludimila fatima elizabeth marcia clarinha sonia mara karla monica lucia itala marise cristina emenaide sandra helia evilene rebeca helo debora juliana celia vera marta natalia nathalia flavia bruna geovana giovana rafaela gabriela sara'.split(' ');
+const NOMES_M = 'guilherme matias matheus ravi alvaro gilmar dede gabriel luis tiago flavio jamerson joao felipe julio miguel vinicius joaquim kennedy lucas adson berg betinho davi rafael daniel samuel israel jose andre henrique arthur artur bernardo heitor enzo noah isaac levi caio ruan renan jonas elias moises abel ismael natan wesley wellington edson nelson robson anderson emerson jefferson cleber vitor igor dimas tomas nicolas ezequiel manoel raul pedro paulo marcos carlos francisco antonio junior ze zeca chico angelo alef rubens william ivo ricardo gerson cesar leonardo yohannes elcio marcio caninde fred olavo rodrigo roberto rodolfo renato diacono'.split(' ');
+function palpiteSexo(nome){
+  const n = norm(nome).replace(/\(.*?\)/g,' ').replace(/[^a-z. ]/g,' ').trim(); if (!n) return '';
+  const t = n.split(/\s+/);
+  if (/^(dona|d\.|tia|vo|vovo|madrinha|irma)$/.test(t[0])) return 'F';
+  if (/^(seu|tio|padrinho|frei|padre|pe\.|diacono)$/.test(t[0])) return 'M';
+  if (t[0] === 'm.') return 'F';
+  if (t[0] === 'j.') return 'M';
+  const p = t[0].replace(/\./g,'');
+  if (NOMES_F.includes(p)) return 'F';
+  if (NOMES_M.includes(p)) return 'M';
+  if (p.length >= 3 && p.endsWith('a')) return 'F';
+  if (p.length >= 3 && p.endsWith('o')) return 'M';
+  return '';
+}
+// sugestão: mulher adulta pelo nome; se o nome não diz, usa o nome que você deu à família
+function sugereLembranca(c){
+  if (c.tipo !== 'Adulto' || /^\d+$/.test(String(c.idade).trim()) && +c.idade < 18) return { v: false, duvida: false };
+  const g = palpiteSexo(c.nome);
+  if (g === 'F') return { v: true, duvida: false };
+  if (g === 'M') return { v: false, duvida: false };
+  const fn = toks(famNome(c.familia)), cn = toks(c.nome.replace(/\(.*?\)/g,''));
+  const naFamilia = cn.length && cn.every(t => fn.includes(t));
+  return { v: !!naFamilia, duvida: true };
+}
+function renderGift(conv){
+  const G = conv.filter(c => c.lembranca), E = D.convidados.filter(c => c.lista==='Espera' && c.lembranca);
+  const conf = G.filter(c => c.presenca==='Confirmado').length, nao = G.filter(c => c.presenca==='Não vai').length;
+  const nenhum = !D.convidados.some(c => c.lembranca);
+  $('#gift').innerHTML = '<span class="ico">🎁</span><div class="txt">' + (nenhum
+    ? '<b>Lembranças</b><small>Marque quem recebe lembrança. Eu já deixo as mulheres adultas sugeridas.</small>'
+    : '<b class="big">' + G.length + '</b> lembranças na lista · <b>' + conf + '</b> confirmadas' +
+      '<small>' + (G.length - conf - nao) + ' pendentes · ' + nao + ' não vão' + (E.length ? ' · +' + E.length + ' na lista de espera' : '') + '</small>') +
+    '</div><button class="giftbtn" id="rev-gift">' + (nenhum ? 'Marcar agora' : 'Revisar') + '</button>';
+}
+let lSel = new Set(), lDuv = new Set();
+function abrirLembr(){
+  const nenhum = !D.convidados.some(c => c.lembranca);
+  lSel = new Set(); lDuv = new Set();
+  D.convidados.forEach(c => {
+    const s = sugereLembranca(c);
+    if (nenhum ? s.v : c.lembranca) lSel.add(c.id);
+    if (s.duvida && c.tipo === 'Adulto') lDuv.add(c.id);
+  });
+  $('#l-busca').value = ''; renderLPick(); $('#lmodal').classList.remove('hidden');
+}
+function renderLPick(){
+  const q = norm($('#l-busca').value.trim());
+  const ad = D.convidados.filter(c => c.tipo === 'Adulto' && (!q || norm(c.nome).includes(q)));
+  const grupos = [];
+  ad.forEach(c => { const k = (c.lista==='Espera' ? '2' : '1') + '|' + (famNome(c.familia) || 'Sem família'); let g = grupos.find(x => x.k === k); if (!g) grupos.push(g = { k, c: [] }); g.c.push(c); });
+  $('#lpick').innerHTML = grupos.map(g => '<div class="lgrp">' + esc(g.k.split('|')[1]) + (g.k[0]==='2' ? ' · espera' : '') + '</div>' + g.c.map(c =>
+    '<label class="' + (lDuv.has(c.id) ? 'duv' : '') + '"><input type="checkbox" data-id="' + esc(c.id) + '" ' + (lSel.has(c.id) ? 'checked' : '') + '> ' + esc(c.nome) +
+    (lDuv.has(c.id) ? '<span class="q">confira</span>' : '') + '</label>').join('')).join('') || '<div class="empty">Nenhum nome.</div>';
+  const n = D.convidados.filter(c => lSel.has(c.id) && c.lista === 'Convidados').length;
+  $('#lcount').textContent = n + ' marcadas na lista' + (D.convidados.some(c => lSel.has(c.id) && c.lista==='Espera') ? ' (+ espera)' : '') + '.';
+}
+$('#gift').addEventListener('click', e => { if (e.target.id === 'rev-gift') abrirLembr(); });
+$('#l-busca').addEventListener('input', renderLPick);
+$('#lpick').addEventListener('change', e => { const cb = e.target.closest('[data-id]'); if (!cb) return; cb.checked ? lSel.add(cb.dataset.id) : lSel.delete(cb.dataset.id); renderLPick(); });
+$('#lf-x').addEventListener('click', () => $('#lmodal').classList.add('hidden'));
+$('#lmodal').addEventListener('click', e => { if (e.target.id === 'lmodal') $('#lmodal').classList.add('hidden'); });
+$('#lf').addEventListener('submit', e => {
+  e.preventDefault(); const mapa = {};
+  D.convidados.forEach(c => { const v = lSel.has(c.id); if (v !== !!c.lembranca) mapa[c.id] = v; });
+  $('#lmodal').classList.add('hidden');
+  if (!Object.keys(mapa).length) return toast('Nada mudou');
+  carregar('definirLembranca', { mapa }, '🎁 Lembranças salvas');
+});
+
+/* ---------- sugestão de nomes de família ---------- */
+function limpaNome(n){ return String(n).replace(/\s*\(.*?\)\s*/g,' ').replace(/\s+/g,' ').trim(); }
+function juntar(a){ return a.length <= 1 ? (a[0]||'') : a.slice(0,-1).join(', ') + ' e ' + a[a.length-1]; }
+function sugestaoNome(f){
+  const m = D.convidados.filter(c => c.familia === f.codigo);
+  let ad = m.filter(c => c.tipo === 'Adulto' && !String(c.idade).trim());
+  if (!ad.length) ad = m.filter(c => c.tipo === 'Adulto');
+  if (!ad.length) ad = m.slice(0,1);
+  // mulher primeiro, como você fez nos nomes das famílias
+  // primeiro quem você já tinha usado no nome da família, depois as mulheres, depois os homens (mantendo a ordem do cadastro)
+  const fn = toks(f.nome);
+  const peso = c => { const t = toks(limpaNome(c.nome)); return (t.length && t.every(x => fn.includes(x))) ? 0 : palpiteSexo(c.nome)==='F' ? 1 : 2; };
+  ad = ad.map((c,i) => ({ c, i })).sort((x,y) => peso(x.c) - peso(y.c) || x.i - y.i).map(x => x.c);
+  const nomes = ad.map(c => limpaNome(c.nome));
+  return nomes.length > 4 ? nomes.slice(0,3).join(', ') + ' e família' : juntar(nomes);
+}
+function abrirSug(){
+  const F = D.familias || [];
+  $('#spick').innerHTML = F.map(f => {
+    const s = sugestaoNome(f), dif = norm(s) !== norm(f.nome);
+    const kids = D.convidados.filter(c => c.familia === f.codigo && c.tipo === 'Criança').map(c => c.nome);
+    return '<div class="sugrow"><input type="checkbox" data-cod="' + esc(f.codigo) + '" ' + (dif ? 'checked' : '') + '>' +
+      '<input type="text" data-nome="' + esc(f.codigo) + '" value="' + esc(s) + '" maxlength="80">' +
+      '<div class="old">Hoje: ' + esc(f.nome) + (kids.length ? ' · crianças: ' + esc(kids.join(', ')) : '') + '</div></div>';
+  }).join('') || '<div class="empty">Nenhuma família ainda.</div>';
+  $('#smodal').classList.remove('hidden');
+}
+$('#sug-fam').addEventListener('click', abrirSug);
+$('#spick').addEventListener('input', e => { const t = e.target.closest('[data-nome]'); if (t) $('#spick [data-cod="' + t.dataset.nome + '"]').checked = true; });
+$('#sf-x').addEventListener('click', () => $('#smodal').classList.add('hidden'));
+$('#smodal').addEventListener('click', e => { if (e.target.id === 'smodal') $('#smodal').classList.add('hidden'); });
+$('#sf').addEventListener('submit', e => {
+  e.preventDefault(); const mapa = {};
+  document.querySelectorAll('#spick [data-cod]').forEach(cb => { if (cb.checked) { const v = $('#spick [data-nome="' + cb.dataset.cod + '"]').value.trim(); if (v) mapa[cb.dataset.cod] = v; } });
+  $('#smodal').classList.add('hidden');
+  if (!Object.keys(mapa).length) return toast('Nada mudou');
+  carregar('renomearFamilias', { mapa }, Object.keys(mapa).length + ' famílias renomeadas');
+});
+
+/* ---------- checklist ---------- */
+const ORDEM_CAT = ['Convidados','Local','Comida','Decoração','Lembranças','Dia da festa','Depois'];
+let cfiltro = '', itemEd = null;
+function dataBR(iso){ const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] : ''; }
+function hojeISO(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function renderCheck(){
+  const L = D.checklist || [], feitas = L.filter(x => x.feito).length, pct = L.length ? Math.round(feitas / L.length * 100) : 0;
+  $('#cprog').innerHTML = '<div class="t"><span><b>' + feitas + '</b> de ' + L.length + ' feitas</span><span>' + pct + '%</span></div><div class="bar"><i style="width:' + pct + '%"></i></div>';
+  let arr = L.filter(x => cfiltro === 'p' ? !x.feito : cfiltro === 'f' ? x.feito : true);
+  const cats = Array.from(new Set(L.map(x => x.categoria || 'Outros')));
+  cats.sort((a,b) => ((ORDEM_CAT.indexOf(a)+1)||99) - ((ORDEM_CAT.indexOf(b)+1)||99) || a.localeCompare(b));
+  $('#ccats').innerHTML = Array.from(new Set(ORDEM_CAT.concat(cats))).map(c => '<option value="' + esc(c) + '">').join('');
+  const hoje = hojeISO();
+  $('#clist').innerHTML = cats.map(cat => {
+    const it = arr.filter(x => (x.categoria || 'Outros') === cat); if (!it.length) return '';
+    const tot = L.filter(x => (x.categoria||'Outros') === cat), ok = tot.filter(x => x.feito).length;
+    return '<div class="sec-h">' + esc(cat) + ' · ' + ok + '/' + tot.length + '</div><div class="list">' + it.map(x => {
+      const late = !x.feito && x.prazo && x.prazo < hoje;
+      const meta = [x.prazo ? '<span class="' + (late ? 'late' : '') + '">📅 ' + dataBR(x.prazo) + (late ? ' · atrasada' : '') + '</span>' : '', x.resp ? '👤 ' + esc(x.resp) : '', x.obs ? esc(x.obs) : ''].filter(Boolean).join(' · ');
+      return '<div class="citem' + (x.feito ? ' done' : '') + '" data-id="' + esc(x.id) + '"><input type="checkbox" ' + (x.feito ? 'checked' : '') + ' aria-label="Feito">' +
+        '<div class="tx"><div>' + esc(x.tarefa) + '</div>' + (meta ? '<div class="m">' + meta + '</div>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  }).join('') || '<div class="empty">' + (L.length ? 'Nada aqui.' : 'Nenhuma tarefa ainda. Toque em “+ Tarefa”.') + '</div>';
+}
+$('#cchips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; cfiltro = b.dataset.cf;
+  document.querySelectorAll('#cchips .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); renderCheck(); });
+$('#clist').addEventListener('click', e => {
+  const row = e.target.closest('.citem'); if (!row) return;
+  const x = D.checklist.find(i => i.id === row.dataset.id); if (!x) return;
+  if (e.target.matches('input[type=checkbox]')) { x.feito = e.target.checked; renderCheck(); carregar('salvarItem', { tabela: 'checklist', item: x }); }
+  else if (e.target.closest('.tx')) abrirItem(x);
+});
+function abrirItem(x){
+  itemEd = x || null;
+  $('#cf-t').textContent = x ? 'Editar tarefa' : 'Nova tarefa';
+  $('#cf-tarefa').value = x ? x.tarefa : ''; $('#cf-cat').value = x ? x.categoria : '';
+  $('#cf-prazo').value = x ? x.prazo : ''; $('#cf-resp').value = x ? x.resp : ''; $('#cf-obs').value = x ? x.obs : '';
+  $('#cf-feito').checked = !!(x && x.feito); $('#cf-del').classList.toggle('hidden', !x);
+  $('#cmodal').classList.remove('hidden'); setTimeout(() => $('#cf-tarefa').focus(), 50);
+}
+$('#cf-x').addEventListener('click', () => $('#cmodal').classList.add('hidden'));
+$('#cmodal').addEventListener('click', e => { if (e.target.id === 'cmodal') $('#cmodal').classList.add('hidden'); });
+$('#cf').addEventListener('submit', e => {
+  e.preventDefault(); const tarefa = $('#cf-tarefa').value.trim(); if (!tarefa) return;
+  const item = { id: itemEd ? itemEd.id : '', tarefa, categoria: $('#cf-cat').value.trim(), prazo: $('#cf-prazo').value, resp: $('#cf-resp').value.trim(), obs: $('#cf-obs').value.trim(), feito: $('#cf-feito').checked };
+  $('#cmodal').classList.add('hidden'); carregar('salvarItem', { tabela: 'checklist', item }, itemEd ? 'Tarefa salva' : 'Tarefa adicionada');
+});
+$('#cf-del').addEventListener('click', () => { if (!itemEd || !confirm('Excluir a tarefa “' + itemEd.tarefa + '”?')) return;
+  $('#cmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'checklist', id: itemEd.id }, 'Tarefa excluída'); });
+
+/* ---------- financeiro ---------- */
+const CATS_G = ['Comida','Bolo e doces','Bebidas','Decoração','Lembranças','Descartáveis','Local e aluguel','Roupa','Outros'];
+let gastoEd = null;
+function brl(v){ return (Number(v)||0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+function numBR(s){ s = String(s||'').replace(/[^\d,.-]/g,''); if (s.includes(',')) s = s.replace(/\./g,'').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,''); return Math.round((parseFloat(s)||0)*100)/100; }
+function qg(n){ return n + (n === 1 ? ' gasto' : ' gastos'); }
+function renderFin(){
+  const G = D.gastos || [], orc = Number((D.config||{}).orcamento) || 0;
+  const pago = G.filter(g => g.status !== 'A pagar').reduce((s,g) => s + g.valor, 0);
+  const apagar = G.filter(g => g.status === 'A pagar').reduce((s,g) => s + g.valor, 0);
+  const total = pago + apagar, saldo = orc - total;
+  const conf = D.convidados.filter(c => c.lista==='Convidados' && c.presenca==='Confirmado').length;
+  const conv = D.convidados.filter(c => c.lista==='Convidados').length;
+  $('#fcards').innerHTML =
+    '<div class="stat edit" id="f-orc"><div class="l">Orçamento</div><div class="n">' + brl(orc) + '</div><div class="d">toque para mudar</div></div>' +
+    '<div class="stat ok"><div class="l">Pago</div><div class="n">' + brl(pago) + '</div><div class="d">' + G.filter(g=>g.status!=='A pagar').length + ' gastos</div></div>' +
+    '<div class="stat wait"><div class="l">A pagar</div><div class="n">' + brl(apagar) + '</div><div class="d">' + G.filter(g=>g.status==='A pagar').length + ' gastos</div></div>' +
+    '<div class="stat main' + (saldo < 0 ? ' neg' : '') + '"><div class="l">' + (saldo < 0 ? 'Estourou' : 'Ainda tem') + '</div><div class="n">' + brl(Math.abs(saldo)) + '</div><div class="d">orçamento − pago − a pagar</div></div>';
+  const pct = orc ? Math.min(100, Math.round(total / orc * 100)) : 0;
+  const pp = conf ? total / conf : (conv ? total / conv : 0);
+  $('#fprog').innerHTML = '<div class="t"><span>Usado: <b>' + (orc ? Math.round(total / orc * 100) : 0) + '%</b> do orçamento</span><span>' + brl(pp) + ' por pessoa ' + (conf ? 'confirmada' : 'convidada') + '</span></div><div class="bar rose' + (total > orc ? ' over' : '') + '"><i style="width:' + pct + '%"></i></div>';
+  const porCat = {}; G.forEach(g => { const k = g.categoria || 'Outros'; porCat[k] = (porCat[k]||0) + g.valor; });
+  const ks = Object.keys(porCat).sort((a,b) => porCat[b] - porCat[a]);
+  $('#fcats').innerHTML = ks.map(k => '<div class="cat"><span>' + esc(k) + '</span><b>' + brl(porCat[k]) + '</b><div class="bar rose"><i style="width:' + (total ? Math.round(porCat[k] / total * 100) : 0) + '%"></i></div></div>').join('') || '<div class="empty">Sem gastos ainda.</div>';
+  const arr = G.slice().sort((a,b) => String(b.data).localeCompare(String(a.data)));
+  $('#flist').innerHTML = arr.map(g => '<div class="gasto" data-id="' + esc(g.id) + '"><div><div>' + esc(g.descricao) + '</div><div class="d">' + esc(g.categoria || 'Outros') + (g.data ? ' · ' + dataBR(g.data) : '') + (g.obs ? ' · ' + esc(g.obs) : '') + '</div></div>' +
+    '<div class="v">' + brl(g.valor) + '<small class="' + (g.status === 'A pagar' ? 'ap' : 'pg') + '">' + (g.status === 'A pagar' ? 'a pagar' : 'pago') + '</small></div></div>').join('') || '<div class="empty">Toque em “+ Gasto” para registrar o primeiro.</div>';
+  $('#gcats').innerHTML = Array.from(new Set(CATS_G.concat(G.map(g => g.categoria).filter(Boolean)))).map(c => '<option value="' + esc(c) + '">').join('');
+}
+$('#fcards').addEventListener('click', e => {
+  if (!e.target.closest('#f-orc')) return;
+  const v = prompt('Orçamento total da festa (R$):', String((D.config||{}).orcamento || 0).replace('.', ','));
+  if (v === null) return; const n = numBR(v); if (!(n >= 0)) return;
+  carregar('salvarConfig', { chave: 'orcamento', valor: n }, 'Orçamento atualizado');
+});
+$('#flist').addEventListener('click', e => { const r = e.target.closest('.gasto'); if (!r) return; const g = D.gastos.find(x => x.id === r.dataset.id); if (g) abrirGasto(g); });
+function abrirGasto(g){
+  gastoEd = g || null;
+  $('#gf-t').textContent = g ? 'Editar gasto' : 'Novo gasto';
+  $('#gf-desc').value = g ? g.descricao : ''; $('#gf-valor').value = g ? String(g.valor.toFixed(2)).replace('.', ',') : '';
+  $('#gf-cat').value = g ? g.categoria : ''; $('#gf-data').value = g ? g.data : hojeISO();
+  $('#gf-status').value = g ? g.status : 'Pago'; $('#gf-obs').value = g ? g.obs : '';
+  $('#gf-del').classList.toggle('hidden', !g);
+  $('#gmodal').classList.remove('hidden'); setTimeout(() => $('#gf-desc').focus(), 50);
+}
+$('#gf-x').addEventListener('click', () => $('#gmodal').classList.add('hidden'));
+$('#gmodal').addEventListener('click', e => { if (e.target.id === 'gmodal') $('#gmodal').classList.add('hidden'); });
+$('#gf').addEventListener('submit', e => {
+  e.preventDefault(); const descricao = $('#gf-desc').value.trim(), valor = numBR($('#gf-valor').value);
+  if (!descricao) return; if (!(valor > 0)) { $('#gf-valor').focus(); return toast('Informe o valor'); }
+  const item = { id: gastoEd ? gastoEd.id : '', descricao, valor, categoria: $('#gf-cat').value.trim(), data: $('#gf-data').value, status: $('#gf-status').value, obs: $('#gf-obs').value.trim() };
+  $('#gmodal').classList.add('hidden'); carregar('salvarItem', { tabela: 'gastos', item }, gastoEd ? 'Gasto salvo' : 'Gasto registrado');
+});
+$('#gf-del').addEventListener('click', () => { if (!gastoEd || !confirm('Excluir o gasto “' + gastoEd.descricao + '”?')) return;
+  $('#gmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'gastos', id: gastoEd.id }, 'Gasto excluído'); });
 
 document.addEventListener('visibilitychange', () => { if (!document.hidden && senha && !$('#app').classList.contains('hidden')) carregar('listar'); });
 
