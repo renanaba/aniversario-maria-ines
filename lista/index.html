@@ -814,8 +814,8 @@ function renderFin(){
   const conv = D.convidados.filter(c => c.lista==='Convidados').length;
   $('#fcards').innerHTML =
     '<div class="stat edit" id="f-orc"><div class="l">Orçamento</div><div class="n">' + brl(orc) + '</div><div class="d">toque para mudar</div></div>' +
-    '<div class="stat ok"><div class="l">Pago</div><div class="n">' + brl(pago) + '</div><div class="d">' + G.filter(g=>g.status!=='A pagar').length + ' gastos</div></div>' +
-    '<div class="stat wait"><div class="l">A pagar</div><div class="n">' + brl(apagar) + '</div><div class="d">' + G.filter(g=>g.status==='A pagar').length + ' gastos</div></div>' +
+    '<div class="stat ok"><div class="l">Pago</div><div class="n">' + brl(pago) + '</div><div class="d">' + qg(G.filter(g=>g.status!=='A pagar').length) + '</div></div>' +
+    '<div class="stat wait"><div class="l">A pagar</div><div class="n">' + brl(apagar) + '</div><div class="d">' + qg(G.filter(g=>g.status==='A pagar').length) + '</div></div>' +
     '<div class="stat main' + (saldo < 0 ? ' neg' : '') + '"><div class="l">' + (saldo < 0 ? 'Estourou' : 'Ainda tem') + '</div><div class="n">' + brl(Math.abs(saldo)) + '</div><div class="d">orçamento − pago − a pagar</div></div>';
   const pct = orc ? Math.min(100, Math.round(total / orc * 100)) : 0;
   const pp = conf ? total / conf : (conv ? total / conv : 0);
