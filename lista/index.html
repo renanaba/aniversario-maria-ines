@@ -131,8 +131,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .pick input{width:auto}
 .pick small{color:var(--ink-soft);margin-left:auto;font-size:11px;text-align:right}
 .tag.f{background:var(--field);color:var(--ink-soft)}
-.secs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px}
-.secs button{border:0;background:none;border-radius:10px;padding:9px 4px;font-weight:600;font-size:14px;color:var(--ink-soft)}
+.secs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px}
+.secs button{border:0;background:none;border-radius:10px;padding:7px 2px;font-weight:600;font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2}
+.secs button b{font-size:18px;font-weight:400}
 .secs button[aria-pressed=true]{background:var(--rose);color:#fff}
 .gift{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .gift .ico{font-size:26px}
@@ -179,6 +180,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
 .gasto .v small{display:block;font-weight:500;font-size:11px}
 .gasto .v small.ap{color:var(--wait)} .gasto .v small.pg{color:var(--ok)}
 .sec-h{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:18px 2px 8px}
+.forn{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+.forn .h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.forn .it{font-weight:600;font-size:16px}
+.forn .es{font-size:14px;margin-top:2px}
+.forn .dt{font-size:13px;color:var(--ink-soft);margin-top:3px;white-space:pre-line}
+.forn .vl{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin:8px 0 5px;flex-wrap:wrap}
+.forn .vl b{font-variant-numeric:tabular-nums}
+.forn .zap{color:#1F6B3A;font-size:13px;text-decoration:none;font-weight:500}
+.st{font-size:11px;font-weight:600;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.st.A-definir{background:var(--field);color:var(--ink-soft)} .st.Orçando{background:var(--wait-soft);color:var(--wait)} .st.Fechado{background:var(--ok-soft);color:var(--ok)}
+.st.quitado{background:var(--ok);color:#fff}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:20}
 .busy{opacity:.55;pointer-events:none}
 </style>
@@ -204,9 +216,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
   </div>
 
   <nav class="secs">
-    <button data-sec="conv" aria-pressed="true">👥 Convidados</button>
-    <button data-sec="check" aria-pressed="false">✅ Checklist</button>
-    <button data-sec="fin" aria-pressed="false">💰 Financeiro</button>
+    <button data-sec="conv" aria-pressed="true"><b>👥</b>Convidados</button>
+    <button data-sec="festa" aria-pressed="false"><b>🎉</b>Festa</button>
+    <button data-sec="check" aria-pressed="false"><b>✅</b>Checklist</button>
+    <button data-sec="fin" aria-pressed="false"><b>💰</b>Financeiro</button>
   </nav>
 
   <div id="sec-conv">
@@ -250,6 +263,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
       <button class="chip" data-cf="f" aria-pressed="false">Feitas</button>
     </div>
     <div id="clist"></div>
+  </div>
+
+  <div id="sec-festa" class="hidden">
+    <div class="fin" id="pcards"></div>
+    <div class="chips" id="pchips" style="margin-top:12px">
+      <button class="chip" data-pf="" aria-pressed="true">Todos</button>
+      <button class="chip" data-pf="A definir" aria-pressed="false">A definir</button>
+      <button class="chip" data-pf="Orçando" aria-pressed="false">Orçando</button>
+      <button class="chip" data-pf="Fechado" aria-pressed="false">Fechados</button>
+      <button class="chip" data-pf="$" aria-pressed="false">Falta pagar</button>
+    </div>
+    <div id="plist"></div>
   </div>
 
   <div id="sec-fin" class="hidden">
@@ -325,6 +350,30 @@ input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff
     <label for="cf-obs">Observação</label><input id="cf-obs" maxlength="300">
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="cf-feito" style="width:auto"> Feito</label>
     <div class="btns"><button type="button" class="btn-d hidden" id="cf-del">Excluir</button><button type="button" class="btn-s" id="cf-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
+  </form>
+</div>
+
+<div class="modal hidden" id="pmodal" role="dialog" aria-modal="true">
+  <form class="sheet" id="pf" style="max-height:92vh;overflow:auto">
+    <h2 id="pf-t">Novo item</h2>
+    <label for="pf-item">O quê</label><input id="pf-item" list="pitens" maxlength="60" required placeholder="Ex.: Salgados">
+    <datalist id="pitens"></datalist>
+    <label for="pf-status">Situação</label>
+    <select id="pf-status"><option>A definir</option><option>Orçando</option><option>Fechado</option></select>
+    <label for="pf-escolha">Fornecedor / escolha</label><input id="pf-escolha" maxlength="120" placeholder="Ex.: Salgados da Tia Neide">
+    <label for="pf-contato">Contato <small>(WhatsApp)</small></label><input id="pf-contato" inputmode="tel" maxlength="60" placeholder="(84) 9 0000-0000">
+    <label for="pf-detalhes">Detalhes <small>(quantidade, sabores, tema…)</small></label><textarea id="pf-detalhes" maxlength="400" rows="3"></textarea>
+    <label for="pf-entrega">Entrega / horário</label><input id="pf-entrega" maxlength="80" placeholder="Ex.: 23/03 às 14h, buscar na loja">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label for="pf-valor">Valor total (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00"></div>
+      <div><label for="pf-pago">Já pago (R$)</label><input id="pf-pago" inputmode="decimal" placeholder="0,00"></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <button type="button" class="chip" id="pf-quitar">Marcar como pago total</button>
+      <button type="button" class="chip" id="pf-somar">+ Registrar pagamento</button>
+    </div>
+    <label for="pf-obs">Observação <small>(forma de pagamento, sinal…)</small></label><input id="pf-obs" maxlength="300">
+    <div class="btns"><button type="button" class="btn-d hidden" id="pf-del">Excluir</button><button type="button" class="btn-s" id="pf-x">Cancelar</button><button type="submit" class="btn-p">Salvar</button></div>
   </form>
 </div>
 
@@ -420,7 +469,7 @@ function famNome(cod){ const f = (D.familias||[]).find(x => x.codigo === cod); r
 const BASE = new URL('../', location.href).href;
 function linkFam(f){ return BASE + '?f=' + f.codigo; }
 function conviteFam(f){ return 'Oi! 🎈 ' + f.nome + ', vocês estão convidados para o aniversário da Maria Inês! Confirmem aqui quem vai, por favor: ' + linkFam(f); }
-function normD(){ D.familias = D.familias || []; D.checklist = D.checklist || []; D.gastos = D.gastos || []; D.config = D.config || { orcamento: 2000 }; }
+function normD(){ D.familias = D.familias || []; D.checklist = D.checklist || []; D.gastos = D.gastos || []; D.fornecedores = D.fornecedores || []; D.config = D.config || { orcamento: 2000 }; }
 function entrar(){
   normD();
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#add').classList.remove('hidden');
@@ -432,7 +481,7 @@ function conta(arr){ return { t: arr.length, a: arr.filter(c=>c.tipo==='Adulto')
 function ac(x){ return x.a + ' adulto' + (x.a===1?'':'s') + ' · ' + x.c + ' criança' + (x.c===1?'':'s'); }
 
 function render(){
-  renderCheck(); renderFin();
+  renderCheck(); renderFin(); renderFesta();
   const conv = D.convidados.filter(c => c.lista === 'Convidados');
   renderGift(conv);
   const esp = D.convidados.filter(c => c.lista === 'Espera');
@@ -568,7 +617,7 @@ function abrir(c){
   $('#modal').classList.remove('hidden'); setTimeout(()=>$('#ef-nome').focus(), 50);
 }
 function fechar(){ $('#modal').classList.add('hidden'); }
-$('#add').addEventListener('click', () => sec === 'check' ? abrirItem(null) : sec === 'fin' ? abrirGasto(null) : aba === 'Famílias' ? abrirFam(null) : abrir(null));
+$('#add').addEventListener('click', () => sec === 'festa' ? abrirForn(null) : sec === 'check' ? abrirItem(null) : sec === 'fin' ? abrirGasto(null) : aba === 'Famílias' ? abrirFam(null) : abrir(null));
 $('#ef-x').addEventListener('click', fechar);
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') fechar(); });
 $('#ef').addEventListener('submit', e => {
@@ -655,10 +704,10 @@ $('#ff-del').addEventListener('click', () => {
 document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => {
   sec = b.dataset.sec;
   document.querySelectorAll('[data-sec]').forEach(x => x.setAttribute('aria-pressed', x === b));
-  ['conv','check','fin'].forEach(k => $('#sec-' + k).classList.toggle('hidden', k !== sec));
-  $('#titulo-sec').textContent = { conv: 'Convidados', check: 'Checklist', fin: 'Financeiro' }[sec];
+  ['conv','festa','check','fin'].forEach(k => $('#sec-' + k).classList.toggle('hidden', k !== sec));
+  $('#titulo-sec').textContent = { conv: 'Convidados', festa: 'Definições da festa', check: 'Checklist', fin: 'Financeiro' }[sec];
   $('#convite').classList.toggle('hidden', sec !== 'conv');
-  $('#add').textContent = sec === 'check' ? '+ Tarefa' : sec === 'fin' ? '+ Gasto' : '+ Adicionar';
+  $('#add').textContent = sec === 'festa' ? '+ Item' : sec === 'check' ? '+ Tarefa' : sec === 'fin' ? '+ Gasto' : '+ Adicionar';
   window.scrollTo({ top: 0 });
 }));
 
@@ -926,6 +975,67 @@ $('#imp-check').addEventListener('click', async () => {
   } finally { importando = false; btn.textContent = '📅 Importar cronograma até 23/03'; }
 });
 
+/* ---------- definições da festa (fornecedores) ---------- */
+const ITENS_P = ['Local','Salgados','Bolo','Docinhos','Bebidas','Gelo','Decoração','Lembranças','Descartáveis','Fotos','Som','Roupa','Outros'];
+let pfiltro = '', fornEd = null;
+function renderFesta(){
+  const P = D.fornecedores || [];
+  const tot = P.reduce((s,f) => s + f.valor, 0), pago = P.reduce((s,f) => s + Math.min(f.pago, f.valor || f.pago), 0), falta = P.reduce((s,f) => s + Math.max(0, f.valor - f.pago), 0);
+  const fech = P.filter(f => f.status === 'Fechado').length;
+  $('#pcards').innerHTML =
+    '<div class="stat main"><div class="l">Definidos</div><div class="n">' + fech + '/' + P.length + '</div><div class="d">itens fechados</div></div>' +
+    '<div class="stat"><div class="l">Contratado</div><div class="n">' + brl(tot) + '</div><div class="d">soma dos valores</div></div>' +
+    '<div class="stat ok"><div class="l">Já pago</div><div class="n">' + brl(pago) + '</div><div class="d">' + (tot ? Math.round(pago / tot * 100) : 0) + '% do contratado</div></div>' +
+    '<div class="stat wait"><div class="l">Falta pagar</div><div class="n">' + brl(falta) + '</div><div class="d">' + P.filter(f => f.valor > f.pago).length + ' itens</div></div>';
+  let arr = P.filter(f => pfiltro === '$' ? f.valor > f.pago : pfiltro ? f.status === pfiltro : true);
+  const ordem = { 'Orçando': 0, 'Fechado': 1, 'A definir': 2 };
+  arr = arr.map((f,i) => ({ f, i })).sort((a,b) => (ordem[a.f.status] - ordem[b.f.status]) || a.i - b.i).map(o => o.f);
+  $('#plist').innerHTML = arr.map(f => {
+    const zap = String(f.contato||'').replace(/\D/g,'');
+    const quit = f.valor > 0 && f.pago >= f.valor;
+    const pct = f.valor ? Math.min(100, Math.round(f.pago / f.valor * 100)) : 0;
+    return '<div class="forn" data-id="' + esc(f.id) + '"><div class="h"><span class="it">' + esc(f.item) + '</span><span class="st ' + f.status.replace(' ','-') + '">' + esc(f.status) + '</span></div>' +
+      (f.escolha ? '<div class="es">' + esc(f.escolha) + '</div>' : '') +
+      (f.detalhes ? '<div class="dt">' + esc(f.detalhes) + '</div>' : '') +
+      (f.entrega ? '<div class="dt">🚚 ' + esc(f.entrega) + '</div>' : '') +
+      (f.valor || f.pago ? '<div class="vl"><span>Total <b>' + brl(f.valor) + '</b></span><span>Pago <b>' + brl(f.pago) + '</b></span>' +
+        (quit ? '<span class="st quitado">Quitado</span>' : '<span>Falta <b>' + brl(Math.max(0, f.valor - f.pago)) + '</b></span>') + '</div>' +
+        '<div class="bar"><i style="width:' + pct + '%"></i></div>' : '') +
+      (zap.length >= 10 ? '<div style="margin-top:6px"><a class="zap" href="https://wa.me/55' + zap.replace(/^55(?=\d{10,11}$)/,'') + '" target="_blank" rel="noopener">WhatsApp ' + esc(f.contato) + '</a></div>' : (f.contato ? '<div class="dt">📞 ' + esc(f.contato) + '</div>' : '')) +
+      (f.obs ? '<div class="dt">' + esc(f.obs) + '</div>' : '') + '</div>';
+  }).join('') || '<div class="empty">' + (P.length ? 'Nada aqui.' : 'Toque em “+ Item” para começar.') + '</div>';
+  $('#pitens').innerHTML = Array.from(new Set(ITENS_P.concat(P.map(f => f.item)))).map(c => '<option value="' + esc(c) + '">').join('');
+}
+$('#pchips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; pfiltro = b.dataset.pf;
+  document.querySelectorAll('#pchips .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); renderFesta(); });
+$('#plist').addEventListener('click', e => { if (e.target.closest('a')) return; const r = e.target.closest('.forn'); if (!r) return; const f = D.fornecedores.find(x => x.id === r.dataset.id); if (f) abrirForn(f); });
+const reais = v => v ? String(Number(v).toFixed(2)).replace('.', ',') : '';
+function abrirForn(f){
+  fornEd = f || null;
+  $('#pf-t').textContent = f ? f.item : 'Novo item';
+  $('#pf-item').value = f ? f.item : ''; $('#pf-status').value = f ? f.status : 'A definir';
+  $('#pf-escolha').value = f ? f.escolha : ''; $('#pf-contato').value = f ? f.contato : ''; $('#pf-detalhes').value = f ? f.detalhes : '';
+  $('#pf-entrega').value = f ? f.entrega : ''; $('#pf-valor').value = f ? reais(f.valor) : ''; $('#pf-pago').value = f ? reais(f.pago) : ''; $('#pf-obs').value = f ? f.obs : '';
+  $('#pf-del').classList.toggle('hidden', !f);
+  $('#pmodal').classList.remove('hidden'); $('#pf').scrollTop = 0; if (!f) setTimeout(() => $('#pf-item').focus(), 50);
+}
+$('#pf-quitar').addEventListener('click', () => { $('#pf-pago').value = $('#pf-valor').value; toast('Pago = total'); });
+$('#pf-somar').addEventListener('click', () => {
+  const v = prompt('Valor deste pagamento (R$):'); if (v === null) return; const n = numBR(v); if (!(n > 0)) return;
+  $('#pf-pago').value = reais(numBR($('#pf-pago').value) + n); toast('Somado: ' + brl(n) + ' (salve para gravar)');
+});
+$('#pf-x').addEventListener('click', () => $('#pmodal').classList.add('hidden'));
+$('#pmodal').addEventListener('click', e => { if (e.target.id === 'pmodal') $('#pmodal').classList.add('hidden'); });
+$('#pf').addEventListener('submit', e => {
+  e.preventDefault(); const item = $('#pf-item').value.trim(); if (!item) return;
+  const it = { id: fornEd ? fornEd.id : '', item, status: $('#pf-status').value, escolha: $('#pf-escolha').value.trim(), contato: $('#pf-contato').value.trim(),
+    detalhes: $('#pf-detalhes').value.trim(), entrega: $('#pf-entrega').value.trim(), valor: numBR($('#pf-valor').value), pago: numBR($('#pf-pago').value), obs: $('#pf-obs').value.trim() };
+  if (it.pago > it.valor && it.valor > 0 && !confirm('O valor pago está maior que o total. Salvar mesmo assim?')) return;
+  $('#pmodal').classList.add('hidden'); carregar('salvarItem', { tabela: 'fornecedores', item: it }, fornEd ? 'Salvo' : 'Item adicionado');
+});
+$('#pf-del').addEventListener('click', () => { if (!fornEd || !confirm('Excluir “' + fornEd.item + '”?')) return;
+  $('#pmodal').classList.add('hidden'); carregar('removerItem', { tabela: 'fornecedores', id: fornEd.id }, 'Item excluído'); });
+
 /* ---------- financeiro ---------- */
 const CATS_G = ['Comida','Bolo e doces','Bebidas','Decoração','Lembranças','Descartáveis','Local e aluguel','Roupa','Outros'];
 let gastoEd = null;
@@ -934,25 +1044,28 @@ function numBR(s){ s = String(s||'').replace(/[^\d,.-]/g,''); if (s.includes(','
 function qg(n){ return n + (n === 1 ? ' gasto' : ' gastos'); }
 function renderFin(){
   const G = D.gastos || [], orc = Number((D.config||{}).orcamento) || 0;
-  const pago = G.filter(g => g.status !== 'A pagar').reduce((s,g) => s + g.valor, 0);
-  const apagar = G.filter(g => g.status === 'A pagar').reduce((s,g) => s + g.valor, 0);
+  const P = (D.fornecedores || []).filter(f => f.valor > 0 || f.pago > 0);
+  const pPago = P.reduce((s,f) => s + Math.min(f.pago, f.valor || f.pago), 0), pFalta = P.reduce((s,f) => s + Math.max(0, f.valor - f.pago), 0);
+  const pago = G.filter(g => g.status !== 'A pagar').reduce((s,g) => s + g.valor, 0) + pPago;
+  const apagar = G.filter(g => g.status === 'A pagar').reduce((s,g) => s + g.valor, 0) + pFalta;
   const total = pago + apagar, saldo = orc - total;
   const conf = D.convidados.filter(c => c.lista==='Convidados' && c.presenca==='Confirmado').length;
   const conv = D.convidados.filter(c => c.lista==='Convidados').length;
   $('#fcards').innerHTML =
     '<div class="stat edit" id="f-orc"><div class="l">Orçamento</div><div class="n">' + brl(orc) + '</div><div class="d">toque para mudar</div></div>' +
-    '<div class="stat ok"><div class="l">Pago</div><div class="n">' + brl(pago) + '</div><div class="d">' + qg(G.filter(g=>g.status!=='A pagar').length) + '</div></div>' +
-    '<div class="stat wait"><div class="l">A pagar</div><div class="n">' + brl(apagar) + '</div><div class="d">' + qg(G.filter(g=>g.status==='A pagar').length) + '</div></div>' +
+    '<div class="stat ok"><div class="l">Pago</div><div class="n">' + brl(pago) + '</div><div class="d">fornecedores + gastos</div></div>' +
+    '<div class="stat wait"><div class="l">A pagar</div><div class="n">' + brl(apagar) + '</div><div class="d">fornecedores + gastos</div></div>' +
     '<div class="stat main' + (saldo < 0 ? ' neg' : '') + '"><div class="l">' + (saldo < 0 ? 'Estourou' : 'Ainda tem') + '</div><div class="n">' + brl(Math.abs(saldo)) + '</div><div class="d">orçamento − pago − a pagar</div></div>';
   const pct = orc ? Math.min(100, Math.round(total / orc * 100)) : 0;
   const pp = conf ? total / conf : (conv ? total / conv : 0);
   $('#fprog').innerHTML = '<div class="t"><span>Usado: <b>' + (orc ? Math.round(total / orc * 100) : 0) + '%</b> do orçamento</span><span>' + brl(pp) + ' por pessoa ' + (conf ? 'confirmada' : 'convidada') + '</span></div><div class="bar rose' + (total > orc ? ' over' : '') + '"><i style="width:' + pct + '%"></i></div>';
   const porCat = {}; G.forEach(g => { const k = g.categoria || 'Outros'; porCat[k] = (porCat[k]||0) + g.valor; });
+  P.forEach(f => { const k = f.item || 'Outros'; porCat[k] = (porCat[k]||0) + Math.max(f.valor, f.pago); });
   const ks = Object.keys(porCat).sort((a,b) => porCat[b] - porCat[a]);
   $('#fcats').innerHTML = ks.map(k => '<div class="cat"><span>' + esc(k) + '</span><b>' + brl(porCat[k]) + '</b><div class="bar rose"><i style="width:' + (total ? Math.round(porCat[k] / total * 100) : 0) + '%"></i></div></div>').join('') || '<div class="empty">Sem gastos ainda.</div>';
   const arr = G.slice().sort((a,b) => String(b.data).localeCompare(String(a.data)));
   $('#flist').innerHTML = arr.map(g => '<div class="gasto" data-id="' + esc(g.id) + '"><div><div>' + esc(g.descricao) + '</div><div class="d">' + esc(g.categoria || 'Outros') + (g.data ? ' · ' + dataBR(g.data) : '') + (g.obs ? ' · ' + esc(g.obs) : '') + '</div></div>' +
-    '<div class="v">' + brl(g.valor) + '<small class="' + (g.status === 'A pagar' ? 'ap' : 'pg') + '">' + (g.status === 'A pagar' ? 'a pagar' : 'pago') + '</small></div></div>').join('') || '<div class="empty">Toque em “+ Gasto” para registrar o primeiro.</div>';
+    '<div class="v">' + brl(g.valor) + '<small class="' + (g.status === 'A pagar' ? 'ap' : 'pg') + '">' + (g.status === 'A pagar' ? 'a pagar' : 'pago') + '</small></div></div>').join('') || '<div class="empty">Toque em “+ Gasto” para compras avulsas. Os fornecedores (salgados, bolo…) ficam em 🎉 Festa e já entram nas contas acima.</div>';
   $('#gcats').innerHTML = Array.from(new Set(CATS_G.concat(G.map(g => g.categoria).filter(Boolean)))).map(c => '<option value="' + esc(c) + '">').join('');
 }
 $('#fcards').addEventListener('click', e => {
