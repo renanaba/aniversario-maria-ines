@@ -986,7 +986,7 @@ function renderFesta(){
     '<div class="stat main"><div class="l">Definidos</div><div class="n">' + fech + '/' + P.length + '</div><div class="d">itens fechados</div></div>' +
     '<div class="stat"><div class="l">Contratado</div><div class="n">' + brl(tot) + '</div><div class="d">soma dos valores</div></div>' +
     '<div class="stat ok"><div class="l">Já pago</div><div class="n">' + brl(pago) + '</div><div class="d">' + (tot ? Math.round(pago / tot * 100) : 0) + '% do contratado</div></div>' +
-    '<div class="stat wait"><div class="l">Falta pagar</div><div class="n">' + brl(falta) + '</div><div class="d">' + P.filter(f => f.valor > f.pago).length + ' itens</div></div>';
+    '<div class="stat wait"><div class="l">Falta pagar</div><div class="n">' + brl(falta) + '</div><div class="d">' + ((n => n + (n === 1 ? ' item' : ' itens'))(P.filter(f => f.valor > f.pago).length)) + '</div></div>';
   let arr = P.filter(f => pfiltro === '$' ? f.valor > f.pago : pfiltro ? f.status === pfiltro : true);
   const ordem = { 'Orçando': 0, 'Fechado': 1, 'A definir': 2 };
   arr = arr.map((f,i) => ({ f, i })).sort((a,b) => (ordem[a.f.status] - ordem[b.f.status]) || a.i - b.i).map(o => o.f);
